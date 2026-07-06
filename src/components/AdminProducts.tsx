@@ -107,32 +107,39 @@ export function AdminProducts({ products, categories, addProduct, updateProduct,
           <tbody className="divide-y divide-slate-100">
             {products.map((product) => (
               <tr key={product.id} className="hover:bg-slate-50 transition-colors">
-                <td className="py-4 pl-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0">
+                {/* 1. Aumentamos el padding vertical a py-6 para más espacio */}
+                <td className="py-6 pl-2">
+                  <div className="flex items-center gap-4">
+                    {/* 2. Imágenes más grandes: cambiamos w-10 h-10 por w-20 h-20 */}
+                    <div className="w-20 h-20 rounded-lg bg-slate-100 overflow-hidden shrink-0 shadow-sm border border-slate-200">
                       {product.imageUrl && (
                         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                       )}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">{product.name}</p>
+                      {/* 3. Nombre del producto más grande: añadimos text-lg */}
+                      <p className="font-bold text-lg text-slate-900">{product.name}</p>
                     </div>
                   </div>
                 </td>
-                <td className="py-4 text-slate-600">{product.category}</td>
-                <td className="py-4 font-medium text-slate-900">${product.price.toFixed(2)}</td>
-                <td className="py-4">
-                  <span className={`inline-flex px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {/* 4. Aumentamos el padding en el resto de las columnas (py-6) e hicimos los textos un poco más grandes */}
+                <td className="py-6 text-base text-slate-600">{product.category}</td>
+                <td className="py-6 font-medium text-lg text-slate-900">${product.price.toFixed(2)}</td>
+                <td className="py-6">
+                  {/* Etiqueta de estado ligeramente más grande (text-xs) y con más padding */}
+                  <span className={`inline-flex px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {product.inStock ? 'En Stock' : 'Agotado'}
                   </span>
                 </td>
-                <td className="py-4 pr-2 text-right">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="py-6 pr-2 text-right">
+                  <div className="flex items-center justify-end gap-3">
+                    {/* Botones de acción un poco más grandes para facilitar el clic (p-2) */}
                     <button
                       onClick={() => handleOpenModal(product)}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Editar"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => {
@@ -140,9 +147,10 @@ export function AdminProducts({ products, categories, addProduct, updateProduct,
                           deleteProduct(product.id);
                         }
                       }}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </td>
@@ -150,7 +158,7 @@ export function AdminProducts({ products, categories, addProduct, updateProduct,
             ))}
             {products.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-slate-500">
+                <td colSpan={5} className="py-12 text-center text-slate-500 text-base">
                   No hay productos registrados.
                 </td>
               </tr>
