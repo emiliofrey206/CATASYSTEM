@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { Product, Category, Store } from '../types';
 
 interface AdminProductsProps {
-  activeStore: Store; // NUEVO: Recibe la tienda activa
+  activeStore: Store; 
   products: Product[];
   categories: Category[];
   addProduct: (p: Omit<Product, 'id' | 'storeId'>) => void;
@@ -41,7 +41,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
         name: '',
         description: '',
         price: '',
-        category: categories[0] || '',
+        category: categories[0]?.name || '', // CORRECCIÓN: Extraemos el .name
         imageUrl: '',
         inStock: true
       });
@@ -83,7 +83,6 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     <div className="bg-white border border-slate-200 rounded-[2rem] p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          {/* TÍTULOS DINÁMICOS AQUÍ */}
           <h2 className="text-2xl font-bold text-slate-900 uppercase">Inventario de {activeStore?.name}</h2>
           <p className="text-sm text-slate-500 mt-1">Gestiona los catálogos de {activeStore?.name} en este momento.</p>
         </div>
@@ -220,7 +219,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300"
                   >
                     <option value="" disabled>Selecciona...</option>
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    {/* CORRECCIÓN: Iteramos usando el id como key y el name como valor */}
+                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
               </div>
