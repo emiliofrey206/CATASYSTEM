@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Filter } from 'lucide-react';
 import { Product, Category, Store } from '../types';
 
 interface AdminProductsProps {
@@ -14,6 +14,9 @@ interface AdminProductsProps {
 export function AdminProducts({ activeStore, products, categories, addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // NUEVO: Estado para controlar el filtro actual
+  const [selectedFilter, setSelectedFilter] = useState<string>('Todas');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -41,7 +44,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
         name: '',
         description: '',
         price: '',
-        category: categories[0]?.name || '', // CORRECCIÓN: Extraemos el .name
+        category: categories[0]?.name || '',
         imageUrl: '',
         inStock: true
       });
@@ -79,6 +82,11 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     setIsModalOpen(false);
   };
 
+  // NUEVO: Lógica para filtrar los productos antes de mostrarlos en la tabla
+  const filteredProducts = selectedFilter === 'Todas' 
+    ? products 
+    : products.filter(product => product.category === selectedFilter);
+
   return (
     <div className="bg-white border border-slate-200 rounded-[2rem] p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -86,12 +94,32 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
           <h2 className="text-2xl font-bold text-slate-900 uppercase">Inventario de {activeStore?.name}</h2>
           <p className="text-sm text-slate-500 mt-1">Gestiona los catálogos de {activeStore?.name} en este momento.</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Nuevo Producto
-        </button>
+        
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          {/* NUEVO: Menú desplegable para filtrar */}
+          <div className="relative w-full sm:w-auto flex items-center">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <Filter className="h-4 w-4 text-slate-400" />
+            </div>
+            <select
+              value={selectedFilter}
+              onChange={(e) => setSelectedFilter(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 rounded-xl pl-9 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-black/5 cursor-pointer appearance-none"
+            >
+              <option value="Todas">Todas las categorías</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={() => handleOpenModal()}
+            className="w-full sm:w-auto bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Nuevo Producto
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -106,7 +134,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {products.map((product) => (
+            {/* NUEVO: Iteramos sobre filteredProducts en lugar de products */}
+            {filteredProducts.map((product) => (
               <tr key={product.id} className="hover:bg-slate-50 transition-colors">
                 <td className="py-6 pl-2">
                   <div className="flex items-center gap-4">
@@ -149,10 +178,12 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                 </td>
               </tr>
             ))}
-            {products.length === 0 && (
+            {filteredProducts.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-500 text-base">
-                  No hay productos registrados en {activeStore?.name}.
+                  {products.length === 0 
+                    ? `No hay productos registrados en ${activeStore?.name}.`
+                    : `No hay productos en la categoría "${selectedFilter}".`}
                 </td>
               </tr>
             )}
@@ -219,7 +250,6 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300"
                   >
                     <option value="" disabled>Selecciona...</option>
-                    {/* CORRECCIÓN: Iteramos usando el id como key y el name como valor */}
                     {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
