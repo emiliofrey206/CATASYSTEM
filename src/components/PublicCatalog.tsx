@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter, ShoppingBag } from 'lucide-react';
 import { ProductCard } from './ProductCard';
-import { Product, Category } from '../types';
+import { Product, Category, Store } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PublicCatalogProps {
+  store: Store; // NUEVO: Recibe toda la información de la tienda
   products: Product[];
   categories: Category[];
 }
 
-export function PublicCatalog({ products, categories }: PublicCatalogProps) {
+export function PublicCatalog({ store, products, categories }: PublicCatalogProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'Todos'>('Todos');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -25,12 +26,20 @@ export function PublicCatalog({ products, categories }: PublicCatalogProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200">
-      <header className="flex items-center justify-between h-20 px-6 sm:px-8 max-w-7xl mx-auto mb-2 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
-            <ShoppingBag className="h-6 w-6 text-white" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight">Catálogo</span>
+      <header className="flex items-center justify-between h-24 px-6 sm:px-8 max-w-7xl mx-auto mb-4 shrink-0">
+        
+        {/* ENCABEZADO DE LA TIENDA: LOGO Y NOMBRE GIGANTE */}
+        <div className="flex items-center gap-4">
+          {store.logoUrl ? (
+            <img src={store.logoUrl} alt={store.name} className="w-14 h-14 md:w-16 md:h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" />
+          ) : (
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-black rounded-2xl flex items-center justify-center shadow-sm">
+              <ShoppingBag className="h-7 w-7 text-white" />
+            </div>
+          )}
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase text-slate-900 truncate max-w-[200px] sm:max-w-md">
+            {store.name}
+          </h1>
         </div>
 
         <div className="hidden sm:flex items-center gap-4 flex-1 max-w-xl mx-8">
