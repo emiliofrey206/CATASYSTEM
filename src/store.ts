@@ -127,7 +127,7 @@ class CatalogStore {
     await supabase.from('products').delete().eq('id', id);
   }
 
-  // --- CATEGORÍAS (NUEVO CRUD CON SUPABASE) ---
+  // --- CATEGORÍAS ---
   addCategory = async (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -142,18 +142,37 @@ class CatalogStore {
     if (error) alert(`Error guardando categoría: ${error.message}`);
   }
 
-  // NUEVA FUNCIÓN AÑADIDA AQUÍ
+  // FUNCIÓN INTELIGENTE EN CASCADA
   updateCategory = async (id: string, newName: string) => {
     const trimmed = newName.trim();
     if (!trimmed) return;
 
-    // 1. Actualiza la pantalla al instante
+    // 1. Buscamos cuál era el nombre viejo de la categoría antes del cambio
+    const oldCategory = this.categories.find(c => c.id === id);
+    if (!oldCategory || oldCategory.name === trimmed) return;
+    const oldName = oldCategory.name;
+
+    // 2. Actualizamos la categoría en la memoria visual
     this.categories = this.categories.map(c => c.id === id ? { ...c, name: trimmed } : c);
+    
+    // 3. MAGIA: Actualizamos TODOS los productos vinculados a esa categoría instantáneamente
+    this.products = this.products.map(p => 
+      p.category === oldName && p.storeId === oldCategory.storeId 
+        ? { ...p, category: trimmed } 
+        : p
+    );
+    
     this.notify();
 
-    // 2. Guarda en Supabase
-    const { error } = await supabase.from('categories').update({ name: trimmed }).eq('id', id);
-    if (error) alert(`Error actualizando categoría: ${error.message}`);
+    // 4. Guardamos el nuevo nombre de la categoría en Supabase
+    const { error: catError } = await supabase.from('categories').update({ name: trimmed }).eq('id', id);
+    if (catError) alert(`Error actualizando categoría: ${catError.message}`);
+
+    // 5. Le avisamos a Supabase que actualice todos los productos huerfános
+    await supabase.from('products')
+      .update({ category: trimmed })
+      .eq('category', oldName)
+      .eq('storeId', oldCategory.storeId);
   }
 
   deleteCategory = async (id: string) => {
