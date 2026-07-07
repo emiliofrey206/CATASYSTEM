@@ -3,6 +3,7 @@ export interface Store {
   name: string;
   slug: string;
   description?: string;
+  logoUrl?: string; // NUEVO: Soporte para el logo de la tienda
 }
 
 export interface Product {
