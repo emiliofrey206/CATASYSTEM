@@ -4,8 +4,8 @@ import { Category } from '../types';
 
 interface AdminCategoriesProps {
   categories: Category[];
-  addCategory: (c: string) => void;
-  deleteCategory: (c: string) => void;
+  addCategory: (name: string) => void;
+  deleteCategory: (id: string) => void;
 }
 
 export function AdminCategories({ categories, addCategory, deleteCategory }: AdminCategoriesProps) {
@@ -45,12 +45,12 @@ export function AdminCategories({ categories, addCategory, deleteCategory }: Adm
 
       <ul className="divide-y divide-slate-100">
         {categories.map((category) => (
-          <li key={category} className="flex items-center justify-between py-4">
-            <span className="font-medium text-slate-900">{category}</span>
+          <li key={category.id} className="flex items-center justify-between py-4">
+            <span className="font-medium text-slate-900">{category.name}</span>
             <button
               onClick={() => {
-                if(confirm(`¿Seguro que deseas eliminar la categoría "${category}"?`)) {
-                  deleteCategory(category);
+                if(confirm(`¿Seguro que deseas eliminar la categoría "${category.name}"?`)) {
+                  deleteCategory(category.id);
                 }
               }}
               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
