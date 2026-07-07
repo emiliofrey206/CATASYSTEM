@@ -1,54 +1,53 @@
 import { useState, useEffect } from 'react';
 import { Product, Category, Store } from './types';
-import { products as initialProducts, categories as initialCategories, mockStore } from './data';
+import { supabase } from './supabase'; // <-- Aquí conectamos el puente que creamos
 
 class CatalogStore {
-  stores: Store[] = [mockStore];
-  products: Product[] = initialProducts;
-  categories: Category[] = initialCategories;
+  stores: Store[] = [];
+  products: Product[] = [];
+  categories: Category[] = [];
   isLoaded = false;
   isAuthenticated = false;
-  
-  activeStoreId: string = mockStore.id; 
-  
+  activeStoreId: string = '';
+
   private listeners = new Set<() => void>();
 
   constructor() {
     this.isAuthenticated = sessionStorage.getItem('catalog_auth') === 'true';
-    this.load();
-    window.addEventListener('storage', (e) => {
-      if (['catalog_products', 'catalog_categories', 'catalog_stores'].includes(e.key || '')) {
-        this.load();
-      }
-    });
-  }
-
-  private load() {
-    try {
-      const s = localStorage.getItem('catalog_stores');
-      const p = localStorage.getItem('catalog_products');
-      const c = localStorage.getItem('catalog_categories');
-      
-      if (s) {
-        this.stores = JSON.parse(s);
-        if (this.stores.length > 0 && !this.stores.find(store => store.id === this.activeStoreId)) {
-          this.activeStoreId = this.stores[0].id;
-        }
-      } else {
-        localStorage.setItem('catalog_stores', JSON.stringify(this.stores));
-      }
-
-      if (p) this.products = JSON.parse(p);
-      else localStorage.setItem('catalog_products', JSON.stringify(this.products));
-
-      if (c) this.categories = JSON.parse(c);
-      else localStorage.setItem('catalog_categories', JSON.stringify(this.categories));
-    } catch (e) {
-      console.error("Error loading catalog data", e);
+    
+    // Las categorías las mantenemos en local temporalmente para no perder las que ya tenías
+    const c = localStorage.getItem('catalog_categories');
+    if (c) {
+      this.categories = JSON.parse(c);
+    } else {
+      this.categories = ['Electrónica', 'Ropa', 'Deportes', 'Hogar'];
     }
 
-    this.isLoaded = true;
-    this.notify();
+    // Iniciamos la carga desde la nube
+    this.loadFromSupabase();
+  }
+
+  // --- NUEVO: CARGA DESDE SUPABASE ---
+  async loadFromSupabase() {
+    try {
+      const { data: storesData, error: storesError } = await supabase.from('stores').select('*').order('created_at', { ascending: true });
+      if (storesError) throw storesError;
+      
+      const { data: productsData, error: productsError } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (productsError) throw productsError;
+
+      this.stores = storesData || [];
+      this.products = productsData || [];
+
+      if (this.stores.length > 0 && !this.activeStoreId) {
+        this.activeStoreId = this.stores[0].id;
+      }
+    } catch (error) {
+      console.error("Error cargando datos de Supabase:", error);
+    } finally {
+      this.isLoaded = true;
+      this.notify();
+    }
   }
 
   private notify() {
@@ -76,54 +75,63 @@ class CatalogStore {
     this.notify();
   }
 
+  // --- CRUD DE TIENDAS CON SUPABASE ---
   setActiveStore = (storeId: string) => {
     this.activeStoreId = storeId;
     this.notify();
   }
 
-  addStore = (store: Omit<Store, 'id'>) => {
+  addStore = async (store: Omit<Store, 'id'>) => {
     const newStore = { ...store, id: `store-${Date.now()}` };
+    
+    // 1. Actualizamos la pantalla al instante
     this.stores = [...this.stores, newStore];
-    localStorage.setItem('catalog_stores', JSON.stringify(this.stores));
     this.activeStoreId = newStore.id;
     this.notify();
+    
+    // 2. Guardamos en la nube
+    await supabase.from('stores').insert([newStore]);
   }
 
-  updateStore = (id: string, updatedData: Partial<Store>) => {
+  updateStore = async (id: string, updatedData: Partial<Store>) => {
     this.stores = this.stores.map(s => s.id === id ? { ...s, ...updatedData } : s);
-    localStorage.setItem('catalog_stores', JSON.stringify(this.stores));
     this.notify();
+    await supabase.from('stores').update(updatedData).eq('id', id);
   }
 
-  deleteStore = (id: string) => {
+  deleteStore = async (id: string) => {
     this.stores = this.stores.filter(s => s.id !== id);
-    localStorage.setItem('catalog_stores', JSON.stringify(this.stores));
     if (this.activeStoreId === id && this.stores.length > 0) {
       this.activeStoreId = this.stores[0].id;
     }
     this.notify();
+    await supabase.from('stores').delete().eq('id', id);
   }
 
-  addProduct = (product: Omit<Product, 'id' | 'storeId'>) => {
+  // --- CRUD DE PRODUCTOS CON SUPABASE ---
+  addProduct = async (product: Omit<Product, 'id' | 'storeId'>) => {
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
-    const newProduct = { ...product, id: Date.now().toString(), storeId };
-    this.products = [...this.products, newProduct];
-    localStorage.setItem('catalog_products', JSON.stringify(this.products));
+    const newProduct = { ...product, id: `prod-${Date.now()}`, storeId };
+    
+    this.products = [newProduct, ...this.products];
     this.notify();
+    
+    await supabase.from('products').insert([newProduct]);
   }
 
-  updateProduct = (id: string, updatedData: Partial<Product>) => {
+  updateProduct = async (id: string, updatedData: Partial<Product>) => {
     this.products = this.products.map(p => p.id === id ? { ...p, ...updatedData } : p);
-    localStorage.setItem('catalog_products', JSON.stringify(this.products));
     this.notify();
+    await supabase.from('products').update(updatedData).eq('id', id);
   }
 
-  deleteProduct = (id: string) => {
+  deleteProduct = async (id: string) => {
     this.products = this.products.filter(p => p.id !== id);
-    localStorage.setItem('catalog_products', JSON.stringify(this.products));
     this.notify();
+    await supabase.from('products').delete().eq('id', id);
   }
 
+  // --- CATEGORÍAS ---
   addCategory = (category: string) => {
     const trimmed = category.trim();
     if (trimmed && !this.categories.includes(trimmed)) {
