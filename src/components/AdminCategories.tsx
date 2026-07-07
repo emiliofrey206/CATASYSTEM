@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
 import { Category } from '../types';
 
 interface AdminCategoriesProps {
   categories: Category[];
   addCategory: (name: string) => void;
+  updateCategory: (id: string, newName: string) => void;
   deleteCategory: (id: string) => void;
 }
 
-export function AdminCategories({ categories, addCategory, deleteCategory }: AdminCategoriesProps) {
+export function AdminCategories({ categories, addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
   const [newCategory, setNewCategory] = useState('');
+  
+  // Estados para controlar qué categoría se está editando
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,6 +22,18 @@ export function AdminCategories({ categories, addCategory, deleteCategory }: Adm
       addCategory(newCategory.trim());
       setNewCategory('');
     }
+  };
+
+  const startEditing = (category: Category) => {
+    setEditingId(category.id);
+    setEditName(category.name);
+  };
+
+  const handleSaveEdit = (id: string) => {
+    if (editName.trim()) {
+      updateCategory(id, editName.trim());
+    }
+    setEditingId(null);
   };
 
   return (
@@ -46,17 +63,55 @@ export function AdminCategories({ categories, addCategory, deleteCategory }: Adm
       <ul className="divide-y divide-slate-100">
         {categories.map((category) => (
           <li key={category.id} className="flex items-center justify-between py-4">
-            <span className="font-medium text-slate-900">{category.name}</span>
-            <button
-              onClick={() => {
-                if(confirm(`¿Seguro que deseas eliminar la categoría "${category.name}"?`)) {
-                  deleteCategory(category.id);
-                }
-              }}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {editingId === category.id ? (
+              // MODO EDICIÓN
+              <div className="flex flex-1 items-center gap-3 mr-4">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="flex-1 bg-white border border-blue-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveEdit(category.id);
+                    if (e.key === 'Escape') setEditingId(null);
+                  }}
+                />
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => handleSaveEdit(category.id)} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Guardar">
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Cancelar">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // MODO LECTURA NORMAL
+              <>
+                <span className="font-medium text-slate-900">{category.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => startEditing(category)}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Editar"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if(confirm(`¿Seguro que deseas eliminar la categoría "${category.name}"?`)) {
+                        deleteCategory(category.id);
+                      }
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            )}
           </li>
         ))}
         {categories.length === 0 && (
