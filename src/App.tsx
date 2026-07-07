@@ -1,26 +1,26 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
-import { Settings, ExternalLink, LayoutDashboard, LayoutList, LogOut } from 'lucide-react';
+import { Settings, ExternalLink, LayoutDashboard, LayoutList, LogOut, Store as StoreIcon } from 'lucide-react';
 import { useCatalog } from './store';
 import { PublicCatalog } from './components/PublicCatalog';
 import { AdminProducts } from './components/AdminProducts';
 import { AdminCategories } from './components/AdminCategories';
+import { AdminStores } from './components/AdminStores';
 import { Login } from './components/Login';
 
 function AdminLayout() {
-  const [currentView, setCurrentView] = useState<'admin-products' | 'admin-categories'>('admin-products');
+  const [currentView, setCurrentView] = useState<'admin-products' | 'admin-categories' | 'admin-stores'>('admin-products');
   const catalog = useCatalog();
-  const currentStore = catalog.stores[0];
+  
+  if (!catalog.isLoaded) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
+  if (!catalog.isAuthenticated) return <Login />;
 
-  if (!catalog.isLoaded) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
-  }
-
-  if (!catalog.isAuthenticated) {
-    return <Login />;
-  }
-
-  const publicUrl = `/catalogo/${currentStore?.slug || 'tienda'}`;
+  // Identificamos qué tienda está activa actualmente en el panel
+  const activeStore = catalog.stores.find(s => s.id === catalog.activeStoreId) || catalog.stores[0];
+  const publicUrl = `/catalogo/${activeStore?.slug || 'tienda'}`;
+  
+  // Filtramos para que la tabla de productos SOLO muestre los artículos de la tienda seleccionada
+  const activeStoreProducts = catalog.products.filter(p => p.storeId === activeStore?.id);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col overflow-hidden font-sans">
@@ -29,17 +29,31 @@ function AdminLayout() {
           <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
             <Settings className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Katalog Admin</h1>
+          <h1 className="text-xl font-bold tracking-tight hidden sm:block">Katalog Admin</h1>
         </div>
         
         <div className="flex items-center gap-4">
+          {/* NUEVO: Selector de Tienda Activa */}
+          {catalog.stores.length > 0 && (
+            <select
+              value={catalog.activeStoreId}
+              onChange={(e) => catalog.setActiveStore(e.target.value)}
+              className="bg-slate-100 border border-slate-200 text-sm font-bold text-slate-700 rounded-xl px-4 py-2 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+            >
+              {catalog.stores.map(store => (
+                <option key={store.id} value={store.id}>{store.name}</option>
+              ))}
+            </select>
+          )}
+
           <a
             href={publicUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
+            title="Abre el catálogo de la tienda actual"
           >
-            <ExternalLink className="w-4 h-4" /> Ver Catálogo Público
+            <ExternalLink className="w-4 h-4" /> <span className="hidden sm:inline">Ver Catálogo</span>
           </a>
           <button
             onClick={() => catalog.logout()}
@@ -56,6 +70,14 @@ function AdminLayout() {
           <div className="space-y-4">
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Administración</p>
             <nav className="space-y-2">
+              <button
+                onClick={() => setCurrentView('admin-stores')}
+                className={`w-full text-left p-2.5 rounded-xl text-sm font-medium flex items-center gap-3 cursor-pointer transition-colors ${
+                  currentView === 'admin-stores' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <StoreIcon className="w-4 h-4" /> Mis Tiendas
+              </button>
               <button
                 onClick={() => setCurrentView('admin-products')}
                 className={`w-full text-left p-2.5 rounded-xl text-sm font-medium flex items-center gap-3 cursor-pointer transition-colors ${
@@ -77,37 +99,41 @@ function AdminLayout() {
         </aside>
 
         {/* Mobile Nav */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-4 py-3 flex justify-around">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-2 py-3 flex justify-around">
+          <button
+            onClick={() => setCurrentView('admin-stores')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${currentView === 'admin-stores' ? 'text-black' : 'text-slate-500'}`}
+          >
+            <StoreIcon className="w-5 h-5" /> Tiendas
+          </button>
            <button
             onClick={() => setCurrentView('admin-products')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${
-              currentView === 'admin-products' ? 'text-black' : 'text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${currentView === 'admin-products' ? 'text-black' : 'text-slate-500'}`}
           >
             <LayoutDashboard className="w-5 h-5" /> Productos
           </button>
           <button
             onClick={() => setCurrentView('admin-categories')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${
-              currentView === 'admin-categories' ? 'text-black' : 'text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${currentView === 'admin-categories' ? 'text-black' : 'text-slate-500'}`}
           >
             <LayoutList className="w-5 h-5" /> Categorías
-          </button>
-          <button
-            onClick={() => catalog.logout()}
-            className="flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors"
-          >
-            <LogOut className="w-5 h-5" /> Salir
           </button>
         </div>
 
         {/* Admin Content Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
           <div className="max-w-5xl mx-auto">
+            {currentView === 'admin-stores' && (
+              <AdminStores
+                stores={catalog.stores}
+                addStore={catalog.addStore}
+                updateStore={catalog.updateStore}
+                deleteStore={catalog.deleteStore}
+              />
+            )}
             {currentView === 'admin-products' && (
               <AdminProducts 
-                products={catalog.products} 
+                products={activeStoreProducts} // <- Ahora solo inyecta los productos de la tienda actual
                 categories={catalog.categories}
                 addProduct={catalog.addProduct}
                 updateProduct={catalog.updateProduct}
@@ -132,21 +158,19 @@ function PublicCatalogView() {
   const { slug } = useParams();
   const catalog = useCatalog();
 
-  if (!catalog.isLoaded) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
-  }
+  if (!catalog.isLoaded) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
 
   const store = catalog.stores.find(s => s.slug === slug);
 
   if (!store) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
-        Tienda no encontrada.
+        Tienda o Catálogo no encontrado.
       </div>
     );
   }
 
-  // Filter products by storeId
+  // Filtramos los productos para la vista pública basándonos en el storeId correcto
   const storeProducts = catalog.products.filter(p => p.storeId === store.id);
 
   return <PublicCatalog products={storeProducts} categories={catalog.categories} />;
@@ -156,13 +180,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Admin redirect / */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
-        
-        {/* Admin Panel */}
         <Route path="/admin/*" element={<AdminLayout />} />
-        
-        {/* Public Storefront */}
         <Route path="/catalogo/:slug" element={<PublicCatalogView />} />
       </Routes>
     </BrowserRouter>
