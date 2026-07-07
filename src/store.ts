@@ -8,6 +8,10 @@ class CatalogStore {
   categories: Category[] = initialCategories;
   isLoaded = false;
   isAuthenticated = false;
+  
+  // NUEVO: Mantiene el registro de qué tienda estás administrando en este momento
+  activeStoreId: string = mockStore.id; 
+  
   private listeners = new Set<() => void>();
 
   constructor() {
@@ -26,8 +30,15 @@ class CatalogStore {
       const p = localStorage.getItem('catalog_products');
       const c = localStorage.getItem('catalog_categories');
       
-      if (s) this.stores = JSON.parse(s);
-      else localStorage.setItem('catalog_stores', JSON.stringify(this.stores));
+      if (s) {
+        this.stores = JSON.parse(s);
+        // Si hay tiendas cargadas pero ninguna activa, seleccionamos la primera por defecto
+        if (this.stores.length > 0 && !this.stores.find(store => store.id === this.activeStoreId)) {
+          this.activeStoreId = this.stores[0].id;
+        }
+      } else {
+        localStorage.setItem('catalog_stores', JSON.stringify(this.stores));
+      }
 
       if (p) this.products = JSON.parse(p);
       else localStorage.setItem('catalog_products', JSON.stringify(this.products));
@@ -60,57 +71,3 @@ class CatalogStore {
     }
     return false;
   }
-
-  logout = () => {
-    this.isAuthenticated = false;
-    sessionStorage.removeItem('catalog_auth');
-    this.notify();
-  }
-
-  addProduct = (product: Omit<Product, 'id' | 'storeId'>) => {
-    const storeId = this.stores[0]?.id || 'store-1';
-    const newProduct = { ...product, id: Date.now().toString(), storeId };
-    this.products = [...this.products, newProduct];
-    localStorage.setItem('catalog_products', JSON.stringify(this.products));
-    this.notify();
-  }
-
-  updateProduct = (id: string, updatedData: Partial<Product>) => {
-    this.products = this.products.map(p => p.id === id ? { ...p, ...updatedData } : p);
-    localStorage.setItem('catalog_products', JSON.stringify(this.products));
-    this.notify();
-  }
-
-  deleteProduct = (id: string) => {
-    this.products = this.products.filter(p => p.id !== id);
-    localStorage.setItem('catalog_products', JSON.stringify(this.products));
-    this.notify();
-  }
-
-  addCategory = (category: string) => {
-    const trimmed = category.trim();
-    if (trimmed && !this.categories.includes(trimmed)) {
-      this.categories = [...this.categories, trimmed];
-      localStorage.setItem('catalog_categories', JSON.stringify(this.categories));
-      this.notify();
-    }
-  }
-
-  deleteCategory = (category: string) => {
-    this.categories = this.categories.filter(c => c !== category);
-    localStorage.setItem('catalog_categories', JSON.stringify(this.categories));
-    this.notify();
-  }
-}
-
-export const catalogStore = new CatalogStore();
-
-export function useCatalog() {
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    return catalogStore.subscribe(() => setTick(t => t + 1));
-  }, []);
-
-  return catalogStore;
-}
