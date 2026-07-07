@@ -78,10 +78,20 @@ export function AdminCategories({ categories, addCategory, updateCategory, delet
                   }}
                 />
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => handleSaveEdit(category.id)} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Guardar">
+                  <button 
+                    type="button" /* <-- AJUSTE APLICADO */
+                    onClick={() => handleSaveEdit(category.id)} 
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors" 
+                    title="Guardar"
+                  >
                     <Check className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Cancelar">
+                  <button 
+                    type="button" /* <-- AJUSTE APLICADO */
+                    onClick={() => setEditingId(null)} 
+                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
+                    title="Cancelar"
+                  >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
