@@ -15,25 +15,29 @@ function AdminLayout() {
   if (!catalog.isLoaded) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
   if (!catalog.isAuthenticated) return <Login />;
 
-  // Identificamos qué tienda está activa actualmente en el panel
   const activeStore = catalog.stores.find(s => s.id === catalog.activeStoreId) || catalog.stores[0];
   const publicUrl = `/catalogo/${activeStore?.slug || 'tienda'}`;
   
-  // Filtramos para que la tabla de productos SOLO muestre los artículos de la tienda seleccionada
   const activeStoreProducts = catalog.products.filter(p => p.storeId === activeStore?.id);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col overflow-hidden font-sans">
       <header className="flex items-center justify-between px-6 sm:px-8 py-4 shrink-0 bg-white border-b border-slate-200 z-10 relative">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
-            <Settings className="w-6 h-6 text-white" />
+          {/* HEADER DINÁMICO: LOGO Y NOMBRE DE LA TIENDA */}
+          <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 shadow-sm">
+            {activeStore?.logoUrl ? (
+              <img src={activeStore.logoUrl} alt={activeStore.name} className="w-full h-full object-cover" />
+            ) : (
+              <Settings className="w-6 h-6 text-white" />
+            )}
           </div>
-          <h1 className="text-xl font-bold tracking-tight hidden sm:block">Katalog Admin</h1>
+          <h1 className="text-2xl font-black tracking-tight hidden sm:block uppercase text-slate-800">
+            {activeStore?.name || 'Katalog Admin'}
+          </h1>
         </div>
         
         <div className="flex items-center gap-4">
-          {/* NUEVO: Selector de Tienda Activa */}
           {catalog.stores.length > 0 && (
             <select
               value={catalog.activeStoreId}
@@ -65,7 +69,6 @@ function AdminLayout() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Admin Sidebar */}
         <aside className="w-64 bg-white border-r border-slate-200 p-5 flex flex-col gap-6 overflow-y-auto shrink-0 hidden md:flex">
           <div className="space-y-4">
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Administración</p>
@@ -98,7 +101,6 @@ function AdminLayout() {
           </div>
         </aside>
 
-        {/* Mobile Nav */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-2 py-3 flex justify-around">
           <button
             onClick={() => setCurrentView('admin-stores')}
@@ -120,7 +122,6 @@ function AdminLayout() {
           </button>
         </div>
 
-        {/* Admin Content Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
           <div className="max-w-5xl mx-auto">
             {currentView === 'admin-stores' && (
@@ -133,7 +134,8 @@ function AdminLayout() {
             )}
             {currentView === 'admin-products' && (
               <AdminProducts 
-                products={activeStoreProducts} // <- Ahora solo inyecta los productos de la tienda actual
+                activeStore={activeStore} // Pasamos la tienda activa aquí
+                products={activeStoreProducts}
                 categories={catalog.categories}
                 addProduct={catalog.addProduct}
                 updateProduct={catalog.updateProduct}
@@ -170,7 +172,6 @@ function PublicCatalogView() {
     );
   }
 
-  // Filtramos los productos para la vista pública basándonos en el storeId correcto
   const storeProducts = catalog.products.filter(p => p.storeId === store.id);
 
   return <PublicCatalog products={storeProducts} categories={catalog.categories} />;
