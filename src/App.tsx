@@ -18,7 +18,9 @@ function AdminLayout() {
   const activeStore = catalog.stores.find(s => s.id === catalog.activeStoreId) || catalog.stores[0];
   const publicUrl = `/catalogo/${activeStore?.slug || 'tienda'}`;
   
+  // FILTRAMOS PRODUCTOS Y CATEGORÍAS PARA QUE SEAN EXCLUSIVOS DE LA TIENDA ACTIVA
   const activeStoreProducts = catalog.products.filter(p => p.storeId === activeStore?.id);
+  const activeStoreCategories = catalog.categories.filter(c => c.storeId === activeStore?.id);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col overflow-hidden font-sans">
@@ -148,7 +150,7 @@ function AdminLayout() {
               <AdminProducts 
                 activeStore={activeStore}
                 products={activeStoreProducts}
-                categories={catalog.categories}
+                categories={activeStoreCategories}
                 addProduct={catalog.addProduct}
                 updateProduct={catalog.updateProduct}
                 deleteProduct={catalog.deleteProduct}
@@ -156,7 +158,7 @@ function AdminLayout() {
             )}
             {currentView === 'admin-categories' && (
               <AdminCategories
-                categories={catalog.categories}
+                categories={activeStoreCategories}
                 addCategory={catalog.addCategory}
                 deleteCategory={catalog.deleteCategory}
               />
@@ -184,9 +186,11 @@ function PublicCatalogView() {
     );
   }
 
+  // FILTRAMOS PRODUCTOS Y CATEGORÍAS PARA LA TIENDA PÚBLICA
   const storeProducts = catalog.products.filter(p => p.storeId === store.id);
+  const storeCategories = catalog.categories.filter(c => c.storeId === store.id);
 
-  return <PublicCatalog store={store} products={storeProducts} categories={catalog.categories} />;
+  return <PublicCatalog store={store} products={storeProducts} categories={storeCategories} />;
 }
 
 export default function App() {
