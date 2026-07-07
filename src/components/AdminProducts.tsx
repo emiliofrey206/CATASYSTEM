@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
-import { Product, Category } from '../types';
+import { Product, Category, Store } from '../types';
 
 interface AdminProductsProps {
+  activeStore: Store; // NUEVO: Recibe la tienda activa
   products: Product[];
   categories: Category[];
   addProduct: (p: Omit<Product, 'id' | 'storeId'>) => void;
@@ -10,7 +11,7 @@ interface AdminProductsProps {
   deleteProduct: (id: string) => void;
 }
 
-export function AdminProducts({ products, categories, addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
+export function AdminProducts({ activeStore, products, categories, addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -82,8 +83,9 @@ export function AdminProducts({ products, categories, addProduct, updateProduct,
     <div className="bg-white border border-slate-200 rounded-[2rem] p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Inventario</h2>
-          <p className="text-sm text-slate-500 mt-1">Gestiona los productos de tu catálogo.</p>
+          {/* TÍTULOS DINÁMICOS AQUÍ */}
+          <h2 className="text-2xl font-bold text-slate-900 uppercase">Inventario de {activeStore?.name}</h2>
+          <p className="text-sm text-slate-500 mt-1">Gestiona los catálogos de {activeStore?.name} en este momento.</p>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -107,37 +109,30 @@ export function AdminProducts({ products, categories, addProduct, updateProduct,
           <tbody className="divide-y divide-slate-100">
             {products.map((product) => (
               <tr key={product.id} className="hover:bg-slate-50 transition-colors">
-                {/* 1. Aumentamos el padding vertical a py-6 para más espacio */}
                 <td className="py-6 pl-2">
                   <div className="flex items-center gap-4">
-                    {/* 2. Imágenes más grandes: cambiamos w-10 h-10 por w-20 h-20 */}
                     <div className="w-20 h-20 rounded-lg bg-slate-100 overflow-hidden shrink-0 shadow-sm border border-slate-200">
                       {product.imageUrl && (
                         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                       )}
                     </div>
                     <div>
-                      {/* 3. Nombre del producto más grande: añadimos text-lg */}
                       <p className="font-bold text-lg text-slate-900">{product.name}</p>
                     </div>
                   </div>
                 </td>
-                {/* 4. Aumentamos el padding en el resto de las columnas (py-6) e hicimos los textos un poco más grandes */}
                 <td className="py-6 text-base text-slate-600">{product.category}</td>
                 <td className="py-6 font-medium text-lg text-slate-900">${product.price.toFixed(2)}</td>
                 <td className="py-6">
-                  {/* Etiqueta de estado ligeramente más grande (text-xs) y con más padding */}
                   <span className={`inline-flex px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {product.inStock ? 'En Stock' : 'Agotado'}
                   </span>
                 </td>
                 <td className="py-6 pr-2 text-right">
                   <div className="flex items-center justify-end gap-3">
-                    {/* Botones de acción un poco más grandes para facilitar el clic (p-2) */}
                     <button
                       onClick={() => handleOpenModal(product)}
                       className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar"
                     >
                       <Pencil className="w-5 h-5" />
                     </button>
@@ -148,7 +143,6 @@ export function AdminProducts({ products, categories, addProduct, updateProduct,
                         }
                       }}
                       className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Eliminar"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -159,7 +153,7 @@ export function AdminProducts({ products, categories, addProduct, updateProduct,
             {products.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-500 text-base">
-                  No hay productos registrados.
+                  No hay productos registrados en {activeStore?.name}.
                 </td>
               </tr>
             )}
