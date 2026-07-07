@@ -5,14 +5,15 @@ import { Product, Category, Store } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PublicCatalogProps {
-  store: Store; // NUEVO: Recibe toda la información de la tienda
+  store: Store;
   products: Product[];
   categories: Category[];
 }
 
 export function PublicCatalog({ store, products, categories }: PublicCatalogProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'Todos'>('Todos');
+  // CORRECCIÓN: Ahora le decimos explícitamente a React que esto guardará un texto (string)
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const filteredProducts = useMemo(() => {
@@ -28,7 +29,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200">
       <header className="flex items-center justify-between h-24 px-6 sm:px-8 max-w-7xl mx-auto mb-4 shrink-0">
         
-        {/* ENCABEZADO DE LA TIENDA: LOGO Y NOMBRE GIGANTE */}
         <div className="flex items-center gap-4">
           {store.logoUrl ? (
             <img src={store.logoUrl} alt={store.name} className="w-14 h-14 md:w-16 md:h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" />
@@ -103,19 +103,20 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     {selectedCategory !== 'Todos' && <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>}
                     Todos
                   </button>
+                  {/* CORRECCIÓN: Extraemos el id y el name del objeto */}
                   {categories.map((category) => (
                     <button
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
+                      key={category.id}
+                      onClick={() => setSelectedCategory(category.name)}
                       className={`w-full text-left p-2.5 rounded-xl text-sm font-medium flex items-center gap-3 transition-colors ${
-                        selectedCategory === category
+                        selectedCategory === category.name
                           ? 'bg-slate-900 text-white'
                           : 'text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      {selectedCategory === category && <span className="w-1.5 h-1.5 bg-white rounded-full"></span>}
-                      {selectedCategory !== category && <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>}
-                      {category}
+                      {selectedCategory === category.name && <span className="w-1.5 h-1.5 bg-white rounded-full"></span>}
+                      {selectedCategory !== category.name && <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>}
+                      {category.name}
                     </button>
                   ))}
                 </nav>
