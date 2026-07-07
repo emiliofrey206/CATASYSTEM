@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 class CatalogStore {
   stores: Store[] = [];
   products: Product[] = [];
-  categories: Category[] = [];
+  categories: Category[] = []; // Ahora es un arreglo de objetos reales
   isLoaded = false;
   isAuthenticated = false;
   activeStoreId: string = '';
@@ -14,14 +14,6 @@ class CatalogStore {
 
   constructor() {
     this.isAuthenticated = sessionStorage.getItem('catalog_auth') === 'true';
-    
-    const c = localStorage.getItem('catalog_categories');
-    if (c) {
-      this.categories = JSON.parse(c);
-    } else {
-      this.categories = ['Electrónica', 'Ropa', 'Deportes', 'Hogar'];
-    }
-
     this.loadFromSupabase();
   }
 
@@ -33,8 +25,13 @@ class CatalogStore {
       const { data: productsData, error: productsError } = await supabase.from('products').select('*').order('created_at', { ascending: false });
       if (productsError) throw productsError;
 
+      // NUEVO: Cargamos las categorías desde Supabase
+      const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+      if (categoriesError) throw categoriesError;
+
       this.stores = storesData || [];
       this.products = productsData || [];
+      this.categories = categoriesData || [];
 
       if (this.stores.length > 0 && !this.activeStoreId) {
         this.activeStoreId = this.stores[0].id;
@@ -78,28 +75,22 @@ class CatalogStore {
     this.notify();
   }
 
-  // --- GUARDA TIENDA CON DIAGNÓSTICO ---
+  // --- TIENDAS ---
   addStore = async (store: Omit<Store, 'id'>) => {
     const newStore = { ...store, id: `store-${Date.now()}` };
-    
     this.stores = [...this.stores, newStore];
     this.activeStoreId = newStore.id;
     this.notify();
     
-    // Alerta si falla la inserción en la nube
     const { error } = await supabase.from('stores').insert([newStore]);
-    if (error) {
-      console.error("Error Supabase addStore:", error);
-      alert(`Supabase rechazó la tienda: ${error.message}\nCódigo: ${error.code}`);
-    }
+    if (error) alert(`Error guardando tienda: ${error.message}`);
   }
 
   updateStore = async (id: string, updatedData: Partial<Store>) => {
     this.stores = this.stores.map(s => s.id === id ? { ...s, ...updatedData } : s);
     this.notify();
-    
     const { error } = await supabase.from('stores').update(updatedData).eq('id', id);
-    if (error) alert(`Error al actualizar tienda: ${error.message}`);
+    if (error) alert(`Error actualizando tienda: ${error.message}`);
   }
 
   deleteStore = async (id: string) => {
@@ -108,12 +99,10 @@ class CatalogStore {
       this.activeStoreId = this.stores[0].id;
     }
     this.notify();
-    
-    const { error } = await supabase.from('stores').delete().eq('id', id);
-    if (error) alert(`Error al eliminar tienda: ${error.message}`);
+    await supabase.from('stores').delete().eq('id', id);
   }
 
-  // --- GUARDA PRODUCTO CON DIAGNÓSTICO ---
+  // --- PRODUCTOS ---
   addProduct = async (product: Omit<Product, 'id' | 'storeId'>) => {
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
     const newProduct = { ...product, id: `prod-${Date.now()}`, storeId };
@@ -121,43 +110,42 @@ class CatalogStore {
     this.products = [newProduct, ...this.products];
     this.notify();
     
-    // Alerta si falla la inserción en la nube
     const { error } = await supabase.from('products').insert([newProduct]);
-    if (error) {
-      console.error("Error Supabase addProduct:", error);
-      alert(`Supabase rechazó el producto: ${error.message}\nCódigo: ${error.code}`);
-    }
+    if (error) alert(`Error guardando producto: ${error.message}`);
   }
 
   updateProduct = async (id: string, updatedData: Partial<Product>) => {
     this.products = this.products.map(p => p.id === id ? { ...p, ...updatedData } : p);
     this.notify();
-    
     const { error } = await supabase.from('products').update(updatedData).eq('id', id);
-    if (error) alert(`Error al actualizar producto: ${error.message}`);
+    if (error) alert(`Error actualizando producto: ${error.message}`);
   }
 
   deleteProduct = async (id: string) => {
     this.products = this.products.filter(p => p.id !== id);
     this.notify();
+    await supabase.from('products').delete().eq('id', id);
+  }
+
+  // --- CATEGORÍAS (NUEVO CRUD CON SUPABASE) ---
+  addCategory = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
+    const newCategory = { id: `cat-${Date.now()}`, storeId, name: trimmed };
     
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) alert(`Error al eliminar producto: ${error.message}`);
-  }
-
-  addCategory = (category: string) => {
-    const trimmed = category.trim();
-    if (trimmed && !this.categories.includes(trimmed)) {
-      this.categories = [...this.categories, trimmed];
-      localStorage.setItem('catalog_categories', JSON.stringify(this.categories));
-      this.notify();
-    }
-  }
-
-  deleteCategory = (category: string) => {
-    this.categories = this.categories.filter(c => c !== category);
-    localStorage.setItem('catalog_categories', JSON.stringify(this.categories));
+    this.categories = [...this.categories, newCategory];
     this.notify();
+
+    const { error } = await supabase.from('categories').insert([newCategory]);
+    if (error) alert(`Error guardando categoría: ${error.message}`);
+  }
+
+  deleteCategory = async (id: string) => {
+    this.categories = this.categories.filter(c => c.id !== id);
+    this.notify();
+    await supabase.from('categories').delete().eq('id', id);
   }
 }
 
