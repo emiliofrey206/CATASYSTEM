@@ -142,6 +142,20 @@ class CatalogStore {
     if (error) alert(`Error guardando categoría: ${error.message}`);
   }
 
+  // NUEVA FUNCIÓN AÑADIDA AQUÍ
+  updateCategory = async (id: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+
+    // 1. Actualiza la pantalla al instante
+    this.categories = this.categories.map(c => c.id === id ? { ...c, name: trimmed } : c);
+    this.notify();
+
+    // 2. Guarda en Supabase
+    const { error } = await supabase.from('categories').update({ name: trimmed }).eq('id', id);
+    if (error) alert(`Error actualizando categoría: ${error.message}`);
+  }
+
   deleteCategory = async (id: string) => {
     this.categories = this.categories.filter(c => c.id !== id);
     this.notify();
