@@ -200,3 +200,24 @@ export default function App() {
     </BrowserRouter>
   );
 }
+function PublicCatalogView() {
+  const { slug } = useParams();
+  const catalog = useCatalog();
+
+  if (!catalog.isLoaded) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
+
+  const store = catalog.stores.find(s => s.slug === slug);
+
+  if (!store) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500">
+        Tienda o Catálogo no encontrado.
+      </div>
+    );
+  }
+
+  const storeProducts = catalog.products.filter(p => p.storeId === store.id);
+
+  // ¡AQUÍ ESTÁ EL CAMBIO! Agregamos store={store}
+  return <PublicCatalog store={store} products={storeProducts} categories={catalog.categories} />;
+}
