@@ -17,4 +17,8 @@ export interface Product {
   inStock: boolean;
 }
 
-export type Category = string;
+export interface Category {
+  id: string;
+  storeId: string;
+  name: string;
+}
