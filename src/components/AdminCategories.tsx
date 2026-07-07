@@ -75,6 +75,7 @@ export function AdminCategories({ categories, addCategory, updateCategory, delet
               <div className="flex flex-1 items-center gap-3 mr-4">
                 <input
                   type="text"
+                  autoComplete="off"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="flex-1 bg-white border border-blue-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
