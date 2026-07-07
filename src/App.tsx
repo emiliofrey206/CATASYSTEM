@@ -160,6 +160,7 @@ function AdminLayout() {
               <AdminCategories
                 categories={activeStoreCategories}
                 addCategory={catalog.addCategory}
+                updateCategory={catalog.updateCategory}
                 deleteCategory={catalog.deleteCategory}
               />
             )}
