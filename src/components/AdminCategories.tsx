@@ -12,7 +12,6 @@ interface AdminCategoriesProps {
 export function AdminCategories({ categories, addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
   const [newCategory, setNewCategory] = useState('');
   
-  // Estados para controlar qué categoría se está editando
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
@@ -30,10 +29,19 @@ export function AdminCategories({ categories, addCategory, updateCategory, delet
   };
 
   const handleSaveEdit = (id: string) => {
-    if (editName.trim()) {
-      updateCategory(id, editName.trim());
+    try {
+      if (typeof updateCategory !== 'function') {
+        alert("Error crítico: La función updateCategory no está conectada. Refresca la caché de Vercel.");
+        return;
+      }
+      
+      if (editName.trim()) {
+        updateCategory(id, editName.trim());
+      }
+      setEditingId(null);
+    } catch (error: any) {
+      alert(`Error al intentar guardar: ${error.message || error}`);
     }
-    setEditingId(null);
   };
 
   return (
@@ -64,7 +72,6 @@ export function AdminCategories({ categories, addCategory, updateCategory, delet
         {categories.map((category) => (
           <li key={category.id} className="flex items-center justify-between py-4">
             {editingId === category.id ? (
-              // MODO EDICIÓN
               <div className="flex flex-1 items-center gap-3 mr-4">
                 <input
                   type="text"
@@ -79,7 +86,7 @@ export function AdminCategories({ categories, addCategory, updateCategory, delet
                 />
                 <div className="flex items-center gap-1 shrink-0">
                   <button 
-                    type="button" /* <-- AJUSTE APLICADO */
+                    type="button" 
                     onClick={() => handleSaveEdit(category.id)} 
                     className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors" 
                     title="Guardar"
@@ -87,7 +94,7 @@ export function AdminCategories({ categories, addCategory, updateCategory, delet
                     <Check className="w-4 h-4" />
                   </button>
                   <button 
-                    type="button" /* <-- AJUSTE APLICADO */
+                    type="button" 
                     onClick={() => setEditingId(null)} 
                     className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
                     title="Cancelar"
@@ -97,7 +104,6 @@ export function AdminCategories({ categories, addCategory, updateCategory, delet
                 </div>
               </div>
             ) : (
-              // MODO LECTURA NORMAL
               <>
                 <span className="font-medium text-slate-900">{category.name}</span>
                 <div className="flex items-center gap-2 shrink-0">
