@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Filter, Image as ImageIcon } from 'lucide-react';
 import { Product, Category, Store } from '../types';
 
 interface AdminProductsProps {
@@ -14,8 +14,6 @@ interface AdminProductsProps {
 export function AdminProducts({ activeStore, products, categories, addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
-  // NUEVO: Estado para controlar el filtro actual
   const [selectedFilter, setSelectedFilter] = useState<string>('Todas');
   
   const [formData, setFormData] = useState({
@@ -82,21 +80,19 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     setIsModalOpen(false);
   };
 
-  // NUEVO: Lógica para filtrar los productos antes de mostrarlos en la tabla
   const filteredProducts = selectedFilter === 'Todas' 
     ? products 
     : products.filter(product => product.category === selectedFilter);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-[2rem] p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+    <div className="bg-white border border-slate-200 rounded-[2rem] p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 uppercase">Inventario de {activeStore?.name}</h2>
-          <p className="text-sm text-slate-500 mt-1">Gestiona los catálogos de {activeStore?.name} en este momento.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 uppercase">Inventario de {activeStore?.name}</h2>
+          <p className="text-sm text-slate-500 mt-1 hidden sm:block">Gestiona los catálogos de {activeStore?.name} en este momento.</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          {/* NUEVO: Menú desplegable para filtrar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <div className="relative w-full sm:w-auto flex items-center">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Filter className="h-4 w-4 text-slate-400" />
@@ -122,7 +118,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* VISTA DE ESCRITORIO (Tabla tradicional) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
@@ -134,35 +131,36 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {/* NUEVO: Iteramos sobre filteredProducts en lugar de products */}
             {filteredProducts.map((product) => (
               <tr key={product.id} className="hover:bg-slate-50 transition-colors">
-                <td className="py-6 pl-2">
+                <td className="py-4 pl-2">
                   <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-lg bg-slate-100 overflow-hidden shrink-0 shadow-sm border border-slate-200">
-                      {product.imageUrl && (
+                    <div className="w-16 h-16 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+                      {product.imageUrl ? (
                         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-slate-300" />
                       )}
                     </div>
                     <div>
-                      <p className="font-bold text-lg text-slate-900">{product.name}</p>
+                      <p className="font-bold text-base text-slate-900">{product.name}</p>
                     </div>
                   </div>
                 </td>
-                <td className="py-6 text-base text-slate-600">{product.category}</td>
-                <td className="py-6 font-medium text-lg text-slate-900">${product.price.toFixed(2)}</td>
-                <td className="py-6">
-                  <span className={`inline-flex px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <td className="py-4 text-sm text-slate-600">{product.category}</td>
+                <td className="py-4 font-semibold text-base text-slate-900">${product.price.toFixed(2)}</td>
+                <td className="py-4">
+                  <span className={`inline-flex px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {product.inStock ? 'En Stock' : 'Agotado'}
                   </span>
                 </td>
-                <td className="py-6 pr-2 text-right">
-                  <div className="flex items-center justify-end gap-3">
+                <td className="py-4 pr-2 text-right">
+                  <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleOpenModal(product)}
                       className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
-                      <Pencil className="w-5 h-5" />
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => {
@@ -172,24 +170,72 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                       }}
                       className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
               </tr>
             ))}
-            {filteredProducts.length === 0 && (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-500 text-base">
-                  {products.length === 0 
-                    ? `No hay productos registrados en ${activeStore?.name}.`
-                    : `No hay productos en la categoría "${selectedFilter}".`}
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
+
+      {/* VISTA MÓVIL (Diseño de Tarjetas) */}
+      <div className="md:hidden flex flex-col gap-3">
+        {filteredProducts.map((product) => (
+          <div key={product.id} className="bg-white border border-slate-100 rounded-2xl p-3 flex gap-4 items-center shadow-sm">
+            {/* Imagen a la izquierda */}
+            <div className="w-20 h-20 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+               {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="w-6 h-6 text-slate-300" />
+                )}
+            </div>
+            
+            {/* Información en el centro */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-900 text-sm truncate">{product.name}</h3>
+              <p className="text-xs text-slate-500 truncate mt-0.5">{product.category}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="font-black text-slate-900 text-sm">${product.price.toFixed(2)}</span>
+                <span className={`inline-flex px-1.5 py-0.5 text-[9px] font-bold rounded-md uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {product.inStock ? 'Stock' : 'Agotado'}
+                </span>
+              </div>
+            </div>
+
+            {/* Botones de acción apilados a la derecha */}
+            <div className="flex flex-col gap-1 shrink-0 border-l border-slate-100 pl-3">
+              <button
+                onClick={() => handleOpenModal(product)}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if(confirm('¿Seguro que deseas eliminar este producto?')) {
+                    deleteProduct(product.id);
+                  }
+                }}
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* MENSAJE DE VACÍO (Compartido) */}
+      {filteredProducts.length === 0 && (
+        <div className="py-12 text-center text-slate-500 text-sm bg-slate-50 rounded-xl mt-4 border border-slate-100/50">
+          {products.length === 0 
+            ? `No hay productos registrados en ${activeStore?.name}.`
+            : `No hay productos en la categoría "${selectedFilter}".`}
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (
@@ -309,7 +355,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                 type="submit"
                 className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors"
               >
-                Guardar Producto
+                Guardar
               </button>
             </div>
           </form>
