@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Llaves inyectadas directamente (limpias y sin el /rest/v1/)
+const supabaseUrl = 'https://vbudazfpfywcwxgqupaf.supabase.co'
+const supabaseKey = 'sb_publishable_qH-uswjJKgwXCyAOV7J06Q_P8QVhCH6'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Faltan las credenciales de Supabase. Revisa tu archivo .env')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Puente de conexión definitivo
+export const supabase = createClient(supabaseUrl, supabaseKey)
