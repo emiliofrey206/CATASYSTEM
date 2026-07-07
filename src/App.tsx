@@ -23,21 +23,33 @@ function AdminLayout() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col overflow-hidden font-sans">
       <header className="flex items-center justify-between px-6 sm:px-8 py-4 shrink-0 bg-white border-b border-slate-200 z-10 relative">
-        <div className="flex items-center gap-3">
-          {/* HEADER DINÁMICO: LOGO Y NOMBRE DE LA TIENDA */}
-          <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 shadow-sm">
-            {activeStore?.logoUrl ? (
-              <img src={activeStore.logoUrl} alt={activeStore.name} className="w-full h-full object-cover" />
-            ) : (
-              <Settings className="w-6 h-6 text-white" />
-            )}
+        
+        {/* IZQUIERDA: MARCA DEL SISTEMA */}
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+            <Settings className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight hidden sm:block uppercase text-slate-800">
-            {activeStore?.name || 'Katalog Admin'}
+          <h1 className="text-xl font-black tracking-tight hidden sm:block uppercase text-slate-800">
+            CATASYSTEM
           </h1>
         </div>
+
+        {/* CENTRO: TIENDA ACTIVA (LOGO Y NOMBRE) */}
+        <div className="hidden md:flex items-center justify-center gap-3 flex-1">
+          {activeStore?.logoUrl ? (
+            <img src={activeStore.logoUrl} alt={activeStore.name} className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm bg-white" />
+          ) : (
+            <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center border border-slate-200">
+              <StoreIcon className="w-5 h-5 text-slate-400" />
+            </div>
+          )}
+          <h2 className="text-lg font-bold text-slate-900 uppercase truncate max-w-[250px]">
+            {activeStore?.name || 'Selecciona Tienda'}
+          </h2>
+        </div>
         
-        <div className="flex items-center gap-4">
+        {/* DERECHA: CONTROLES */}
+        <div className="flex items-center justify-end gap-4 flex-1">
           {catalog.stores.length > 0 && (
             <select
               value={catalog.activeStoreId}
@@ -57,7 +69,7 @@ function AdminLayout() {
             className="text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
             title="Abre el catálogo de la tienda actual"
           >
-            <ExternalLink className="w-4 h-4" /> <span className="hidden sm:inline">Ver Catálogo</span>
+            <ExternalLink className="w-4 h-4" /> <span className="hidden lg:inline">Ver Catálogo</span>
           </a>
           <button
             onClick={() => catalog.logout()}
@@ -134,7 +146,7 @@ function AdminLayout() {
             )}
             {currentView === 'admin-products' && (
               <AdminProducts 
-                activeStore={activeStore} // Pasamos la tienda activa aquí
+                activeStore={activeStore}
                 products={activeStoreProducts}
                 categories={catalog.categories}
                 addProduct={catalog.addProduct}
