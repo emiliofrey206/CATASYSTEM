@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Filter, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Filter, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Product, Category, Store } from '../types';
+import { supabase } from '../supabase'; // NUEVO: Importamos la conexión a Supabase
 
 interface AdminProductsProps {
   activeStore: Store; 
@@ -16,6 +17,10 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('Todas');
   
+  // NUEVOS ESTADOS PARA MANEJAR LA SUBIDA
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -26,6 +31,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
   });
 
   const handleOpenModal = (product?: Product) => {
+    setImageFile(null); // Limpiamos cualquier archivo anterior
     if (product) {
       setEditingId(product.id);
       setFormData({
@@ -50,34 +56,68 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     setIsModalOpen(true);
   };
 
+  // AQUÍ CAMBIA LA MAGIA: Ya no trituramos la imagen a texto
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      setImageFile(file); // Guardamos el archivo físico en la memoria temporal
+      // Creamos un enlace falso local solo para mostrar la vista previa al instante
+      setFormData({ ...formData, imageUrl: URL.createObjectURL(file) });
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const productData = {
-      name: formData.name,
-      description: formData.description,
-      price: parseFloat(formData.price) || 0,
-      category: formData.category,
-      imageUrl: formData.imageUrl,
-      inStock: formData.inStock
-    };
+    setIsUploading(true); // Bloqueamos el botón y mostramos "Guardando..."
 
-    if (editingId) {
-      updateProduct(editingId, productData);
-    } else {
-      addProduct(productData);
+    try {
+      let finalImageUrl = formData.imageUrl;
+
+      // Si el usuario seleccionó una foto nueva, la subimos a Supabase Storage
+      if (imageFile) {
+        // Obtenemos la extensión (ej. jpg, png)
+        const fileExt = imageFile.name.split('.').pop();
+        // Creamos un nombre único organizado por tienda (ej. store-1/16892348.jpg)
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${activeStore.id}/${fileName}`;
+
+        // 1. Subimos el archivo físico al bucket 'productos'
+        const { error: uploadError } = await supabase.storage
+          .from('productos')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        // 2. Pedimos el enlace público permanente
+        const { data } = supabase.storage
+          .from('productos')
+          .getPublicUrl(filePath);
+
+        finalImageUrl = data.publicUrl; // Reemplazamos el enlace local por el de la nube
+      }
+
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price) || 0,
+        category: formData.category,
+        imageUrl: finalImageUrl,
+        inStock: formData.inStock
+      };
+
+      if (editingId) {
+        updateProduct(editingId, productData);
+      } else {
+        addProduct(productData);
+      }
+      
+      setIsModalOpen(false);
+      setImageFile(null);
+    } catch (error: any) {
+      alert(`Error subiendo la imagen: ${error.message}`);
+    } finally {
+      setIsUploading(false);
     }
-    setIsModalOpen(false);
   };
 
   const filteredProducts = selectedFilter === 'Todas' 
@@ -228,7 +268,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
         ))}
       </div>
 
-      {/* MENSAJE DE VACÍO (Compartido) */}
+      {/* MENSAJE DE VACÍO */}
       {filteredProducts.length === 0 && (
         <div className="py-12 text-center text-slate-500 text-sm bg-slate-50 rounded-xl mt-4 border border-slate-100/50">
           {products.length === 0 
@@ -248,7 +288,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+                disabled={isUploading}
+                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -261,7 +302,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300"
+                  disabled={isUploading}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
                 />
               </div>
               <div>
@@ -271,7 +313,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 resize-none"
+                  disabled={isUploading}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 resize-none disabled:opacity-50"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -284,7 +327,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                     min="0"
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300"
+                    disabled={isUploading}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -293,7 +337,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                     required
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300"
+                    disabled={isUploading}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
                   >
                     <option value="" disabled>Selecciona...</option>
                     {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -305,22 +350,27 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                 
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-4">
-                    <label className="flex-1 cursor-pointer bg-white border border-slate-200 border-dashed rounded-xl px-4 py-4 text-center hover:bg-slate-50 transition-colors">
-                      <span className="text-sm font-medium text-blue-600">Subir imagen</span>
+                    <label className={`flex-1 cursor-pointer bg-white border border-slate-200 border-dashed rounded-xl px-4 py-4 text-center transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}>
+                      <span className="text-sm font-medium text-blue-600">Subir foto local</span>
                       <input 
                         type="file" 
                         accept="image/*"
                         className="hidden" 
                         onChange={handleImageUpload}
+                        disabled={isUploading}
                       />
                     </label>
                     <span className="text-xs text-slate-400 font-medium uppercase">O</span>
                     <input
                       type="text"
-                      placeholder="Pegar URL de la imagen..."
+                      placeholder="Pegar URL externa..."
                       value={formData.imageUrl}
-                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                      className="flex-[2] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300"
+                      onChange={(e) => {
+                        setFormData({...formData, imageUrl: e.target.value});
+                        setImageFile(null); // Si pega un enlace, cancelamos la foto local
+                      }}
+                      disabled={isUploading}
+                      className="flex-[2] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
                     />
                   </div>
                   
@@ -337,7 +387,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                     type="checkbox"
                     checked={formData.inStock}
                     onChange={(e) => setFormData({...formData, inStock: e.target.checked})}
-                    className="w-5 h-5 rounded border-slate-300 text-black focus:ring-black accent-black"
+                    disabled={isUploading}
+                    className="w-5 h-5 rounded border-slate-300 text-black focus:ring-black accent-black disabled:opacity-50"
                   />
                   <span className="text-sm font-medium text-slate-700">Producto en Stock</span>
                 </label>
@@ -347,15 +398,21 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
+                disabled={isUploading}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors"
+                disabled={isUploading}
+                className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 inline-flex items-center justify-center min-w-[140px]"
               >
-                Guardar
+                {isUploading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
+                ) : (
+                  'Guardar Producto'
+                )}
               </button>
             </div>
           </form>
