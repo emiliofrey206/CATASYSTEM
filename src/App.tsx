@@ -104,12 +104,12 @@ function AdminLayout() {
                 <LayoutDashboard className="w-4 h-4" /> Productos
               </button>
               <button
-                onClick={() => setCurrentView('admin-categories')}
+                onClick={() => setCurrentView('admin-ries')}
                 className={`w-full text-left p-2.5 rounded-xl text-sm font-medium flex items-center gap-3 cursor-pointer transition-colors ${
-                  currentView === 'admin-categories' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  currentView === 'admin-ries' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <LayoutList className="w-4 h-4" /> Categorías
+                <LayoutList className="w-4 h-4" /> rías
               </button>
             </nav>
           </div>
@@ -129,7 +129,7 @@ function AdminLayout() {
             <LayoutDashboard className="w-5 h-5" /> Productos
           </button>
           <button
-            onClick={() => setCurrentView('admin-categories')}
+            onClick={() => setCurrentView('admin-ries')}
             className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${currentView === 'admin-categories' ? 'text-black' : 'text-slate-500'}`}
           >
             <LayoutList className="w-5 h-5" /> Categorías
@@ -158,6 +158,7 @@ function AdminLayout() {
             )}
             {currentView === 'admin-categories' && (
               <AdminCategories
+                activeStore={activeStore}
                 categories={activeStoreCategories}
                 addCategory={catalog.addCategory}
                 updateCategory={catalog.updateCategory}
