@@ -21,4 +21,7 @@ export interface Category {
   id: string;
   storeId: string;
   name: string;
+  description?: string;
+  imageUrl?: string;
+  parentId?: string | null; // Si es null, es categoría principal
 }
