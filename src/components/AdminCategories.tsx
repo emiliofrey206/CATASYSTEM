@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Image as ImageIcon, Loader2, FolderTree } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Image as ImageIcon, Loader2, CornerDownRight } from 'lucide-react';
 import { Category, Store } from '../types';
 import { supabase } from '../supabase';
 
@@ -11,7 +11,7 @@ interface AdminCategoriesProps {
   deleteCategory: (id: string) => void;
 }
 
-export function AdminCategories({ activeStore, categories, addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
+export function AdminCategories({ activeStore, categories = [], addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -23,15 +23,17 @@ export function AdminCategories({ activeStore, categories, addCategory, updateCa
     name: '',
     description: '',
     imageUrl: '',
-    parentId: '' // Vacío significa que es una categoría principal
+    parentId: '' 
   });
+
+  if (!activeStore) return null; // Protección anti-pantalla blanca
 
   const handleOpenModal = (category?: Category) => {
     setImageFile(null);
     if (category) {
       setEditingId(category.id);
       setFormData({
-        name: category.name,
+        name: category.name || '',
         description: category.description || '',
         imageUrl: category.imageUrl || '',
         parentId: category.parentId || ''
@@ -63,7 +65,6 @@ export function AdminCategories({ activeStore, categories, addCategory, updateCa
         const fileName = `cat-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${activeStore.id}/${fileName}`;
 
-        // Reutilizamos tu bucket 'productos' para guardar también las fotos de categorías
         const { error: uploadError } = await supabase.storage
           .from('productos')
           .upload(filePath, imageFile);
@@ -96,7 +97,6 @@ export function AdminCategories({ activeStore, categories, addCategory, updateCa
     }
   };
 
-  // Función para encontrar el nombre de la categoría padre
   const getParentName = (parentId: string | null | undefined) => {
     if (!parentId) return null;
     const parent = categories.find(c => c.id === parentId);
@@ -137,7 +137,7 @@ export function AdminCategories({ activeStore, categories, addCategory, updateCa
               <h3 className="font-bold text-slate-900 text-base truncate">{category.name}</h3>
               {category.parentId && (
                 <p className="text-xs font-semibold text-blue-600 flex items-center gap-1 mt-0.5 truncate">
-                  <FolderTree className="w-3 h-3" /> Subcategoría de: {getParentName(category.parentId)}
+                  <CornerDownRight className="w-3 h-3" /> Subcategoría de: {getParentName(category.parentId)}
                 </p>
               )}
               {category.description && (
@@ -175,7 +175,7 @@ export function AdminCategories({ activeStore, categories, addCategory, updateCa
         )}
       </div>
 
-      {/* Modal de Creación / Edición */}
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -218,7 +218,6 @@ export function AdminCategories({ activeStore, categories, addCategory, updateCa
                 >
                   <option value="">Ninguna (Es una categoría principal)</option>
                   {categories
-                    // Evitamos que una categoría sea padre de sí misma
                     .filter(c => c.id !== editingId)
                     .map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
