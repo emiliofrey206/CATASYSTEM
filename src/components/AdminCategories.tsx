@@ -1,142 +1,304 @@
 import { useState } from 'react';
-import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
-import { Category } from '../types';
+import { Plus, Pencil, Trash2, X, Image as ImageIcon, Loader2, FolderTree } from 'lucide-react';
+import { Category, Store } from '../types';
+import { supabase } from '../supabase';
 
 interface AdminCategoriesProps {
+  activeStore: Store;
   categories: Category[];
-  addCategory: (name: string) => void;
-  updateCategory: (id: string, newName: string) => void;
+  addCategory: (c: Omit<Category, 'id' | 'storeId'>) => void;
+  updateCategory: (id: string, c: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
 }
 
-export function AdminCategories({ categories, addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
-  const [newCategory, setNewCategory] = useState('');
-  
+export function AdminCategories({ activeStore, categories, addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
+  
+  // Estados para la imagen
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newCategory.trim()) {
-      addCategory(newCategory.trim());
-      setNewCategory('');
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    imageUrl: '',
+    parentId: '' // Vacío significa que es una categoría principal
+  });
+
+  const handleOpenModal = (category?: Category) => {
+    setImageFile(null);
+    if (category) {
+      setEditingId(category.id);
+      setFormData({
+        name: category.name,
+        description: category.description || '',
+        imageUrl: category.imageUrl || '',
+        parentId: category.parentId || ''
+      });
+    } else {
+      setEditingId(null);
+      setFormData({ name: '', description: '', imageUrl: '', parentId: '' });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setFormData({ ...formData, imageUrl: URL.createObjectURL(file) });
     }
   };
 
-  const startEditing = (category: Category) => {
-    setEditingId(category.id);
-    setEditName(category.name);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUploading(true);
 
-  const handleSaveEdit = (id: string) => {
     try {
-      if (typeof updateCategory !== 'function') {
-        alert("Error crítico: La función updateCategory no está conectada. Refresca la caché de Vercel.");
-        return;
+      let finalImageUrl = formData.imageUrl;
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `cat-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${activeStore.id}/${fileName}`;
+
+        // Reutilizamos tu bucket 'productos' para guardar también las fotos de categorías
+        const { error: uploadError } = await supabase.storage
+          .from('productos')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from('productos').getPublicUrl(filePath);
+        finalImageUrl = data.publicUrl;
+      }
+
+      const categoryData = {
+        name: formData.name,
+        description: formData.description,
+        imageUrl: finalImageUrl,
+        parentId: formData.parentId === '' ? null : formData.parentId
+      };
+
+      if (editingId) {
+        updateCategory(editingId, categoryData);
+      } else {
+        addCategory(categoryData);
       }
       
-      if (editName.trim()) {
-        updateCategory(id, editName.trim());
-      }
-      setEditingId(null);
+      setIsModalOpen(false);
+      setImageFile(null);
     } catch (error: any) {
-      alert(`Error al intentar guardar: ${error.message || error}`);
+      alert(`Error subiendo la imagen: ${error.message}`);
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  // Función para encontrar el nombre de la categoría padre
+  const getParentName = (parentId: string | null | undefined) => {
+    if (!parentId) return null;
+    const parent = categories.find(c => c.id === parentId);
+    return parent ? parent.name : 'Desconocida';
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-[2rem] p-6 lg:p-8 max-w-2xl">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">Categorías</h2>
-        <p className="text-sm text-slate-500 mt-1">Administra las categorías de tus productos.</p>
+    <div className="bg-white border border-slate-200 rounded-[2rem] p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 uppercase">Categorías</h2>
+          <p className="text-sm text-slate-500 mt-1">Estructura y organiza tu catálogo.</p>
+        </div>
+        
+        <button
+          onClick={() => handleOpenModal()}
+          className="w-full sm:w-auto bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
+        >
+          <Plus className="w-4 h-4" /> Nueva Categoría
+        </button>
       </div>
 
-      <form onSubmit={handleAdd} className="flex gap-3 mb-8">
-        <input
-          type="text"
-          required
-          placeholder="Nueva categoría..."
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300"
-        />
-        <button
-          type="submit"
-          className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Agregar
-        </button>
-      </form>
-
-      <ul className="divide-y divide-slate-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {categories.map((category) => (
-          <li key={category.id} className="flex items-center justify-between py-4">
-            {editingId === category.id ? (
-              <div className="flex flex-1 items-center gap-3 mr-4">
-                <input
-                  type="text"
-                  autoComplete="off"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="flex-1 bg-white border border-blue-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveEdit(category.id);
-                    if (e.key === 'Escape') setEditingId(null);
-                  }}
-                />
-                <div className="flex items-center gap-1 shrink-0">
-                  <button 
-                    type="button" 
-                    onClick={() => handleSaveEdit(category.id)} 
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors" 
-                    title="Guardar"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setEditingId(null)} 
-                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
-                    title="Cancelar"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <span className="font-medium text-slate-900">{category.name}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => startEditing(category)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Editar"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if(confirm(`¿Seguro que deseas eliminar la categoría "${category.name}"?`)) {
-                        deleteCategory(category.id);
-                      }
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Eliminar"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </>
-            )}
-          </li>
+          <div key={category.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex gap-4 items-center shadow-sm hover:border-slate-300 transition-colors">
+            
+            {/* Foto de la Categoría */}
+            <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+              {category.imageUrl ? (
+                <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover" />
+              ) : (
+                <ImageIcon className="w-6 h-6 text-slate-300" />
+              )}
+            </div>
+            
+            {/* Datos */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-900 text-base truncate">{category.name}</h3>
+              {category.parentId && (
+                <p className="text-xs font-semibold text-blue-600 flex items-center gap-1 mt-0.5 truncate">
+                  <FolderTree className="w-3 h-3" /> Subcategoría de: {getParentName(category.parentId)}
+                </p>
+              )}
+              {category.description && (
+                <p className="text-xs text-slate-500 truncate mt-1">{category.description}</p>
+              )}
+            </div>
+
+            {/* Acciones */}
+            <div className="flex flex-col gap-1 shrink-0 border-l border-slate-100 pl-3">
+              <button
+                onClick={() => handleOpenModal(category)}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Editar"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if(confirm(`¿Seguro que deseas eliminar la categoría "${category.name}"? Los productos vinculados quedarán sin categoría.`)) {
+                    deleteCategory(category.id);
+                  }
+                }}
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Eliminar"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         ))}
         {categories.length === 0 && (
-          <li className="py-8 text-center text-slate-500 text-sm">
-            No hay categorías registradas.
-          </li>
+          <div className="col-span-full py-12 text-center text-slate-500 text-sm bg-slate-50 rounded-xl border border-slate-100/50">
+            No hay categorías registradas. Crea la primera para empezar a organizar.
+          </div>
         )}
-      </ul>
+      </div>
+
+      {/* Modal de Creación / Edición */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-900">
+                {editingId ? 'Editar Categoría' : 'Nueva Categoría'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isUploading}
+                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-5">
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre de Categoría</label>
+                <input
+                  required
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  disabled={isUploading}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Categoría Padre (Opcional)
+                </label>
+                <select
+                  value={formData.parentId}
+                  onChange={(e) => setFormData({...formData, parentId: e.target.value})}
+                  disabled={isUploading}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
+                >
+                  <option value="">Ninguna (Es una categoría principal)</option>
+                  {categories
+                    // Evitamos que una categoría sea padre de sí misma
+                    .filter(c => c.id !== editingId)
+                    .map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">Selecciona una si quieres que esta sea una subcategoría (Ej: Cadenas de Oro dentro de Cadenas).</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Descripción (Opcional)</label>
+                <textarea
+                  rows={2}
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  disabled={isUploading}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 resize-none disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Imagen Referencial</label>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-4">
+                    <label className={`flex-1 cursor-pointer bg-white border border-slate-200 border-dashed rounded-xl px-4 py-4 text-center transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}>
+                      <span className="text-sm font-medium text-blue-600">Subir foto local</span>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        className="hidden" 
+                        onChange={handleImageUpload}
+                        disabled={isUploading}
+                      />
+                    </label>
+                    <span className="text-xs text-slate-400 font-medium uppercase">O</span>
+                    <input
+                      type="text"
+                      placeholder="Pegar URL externa..."
+                      value={formData.imageUrl}
+                      onChange={(e) => {
+                        setFormData({...formData, imageUrl: e.target.value});
+                        setImageFile(null);
+                      }}
+                      disabled={isUploading}
+                      className="flex-[2] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
+                    />
+                  </div>
+                  
+                  {formData.imageUrl && (
+                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+                      <img src={formData.imageUrl} alt="Vista previa" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isUploading}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isUploading}
+                className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 inline-flex items-center justify-center min-w-[140px]"
+              >
+                {isUploading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
+                ) : (
+                  'Guardar'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
