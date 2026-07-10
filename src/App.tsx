@@ -18,15 +18,12 @@ function AdminLayout() {
   const activeStore = catalog.stores.find(s => s.id === catalog.activeStoreId) || catalog.stores[0];
   const publicUrl = `/catalogo/${activeStore?.slug || 'tienda'}`;
   
-  // FILTRAMOS PRODUCTOS Y CATEGORÍAS PARA QUE SEAN EXCLUSIVOS DE LA TIENDA ACTIVA
   const activeStoreProducts = catalog.products.filter(p => p.storeId === activeStore?.id);
   const activeStoreCategories = catalog.categories.filter(c => c.storeId === activeStore?.id);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col overflow-hidden font-sans">
       <header className="flex items-center justify-between px-6 sm:px-8 py-4 shrink-0 bg-white border-b border-slate-200 z-10 relative">
-        
-        {/* IZQUIERDA: MARCA DEL SISTEMA */}
         <div className="flex items-center gap-3 flex-1">
           <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-sm">
             <Settings className="w-6 h-6 text-white" />
@@ -36,7 +33,6 @@ function AdminLayout() {
           </h1>
         </div>
 
-        {/* CENTRO: TIENDA ACTIVA (LOGO Y NOMBRE) */}
         <div className="hidden md:flex items-center justify-center gap-3 flex-1">
           {activeStore?.logoUrl ? (
             <img src={activeStore.logoUrl} alt={activeStore.name} className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm bg-white" />
@@ -50,7 +46,6 @@ function AdminLayout() {
           </h2>
         </div>
         
-        {/* DERECHA: CONTROLES */}
         <div className="flex items-center justify-end gap-4 flex-1">
           {catalog.stores.length > 0 && (
             <select
@@ -104,12 +99,12 @@ function AdminLayout() {
                 <LayoutDashboard className="w-4 h-4" /> Productos
               </button>
               <button
-                onClick={() => setCurrentView('admin-ries')}
+                onClick={() => setCurrentView('admin-categories')}
                 className={`w-full text-left p-2.5 rounded-xl text-sm font-medium flex items-center gap-3 cursor-pointer transition-colors ${
-                  currentView === 'admin-ries' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  currentView === 'admin-categories' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <LayoutList className="w-4 h-4" /> rías
+                <LayoutList className="w-4 h-4" /> Categorías
               </button>
             </nav>
           </div>
@@ -129,7 +124,7 @@ function AdminLayout() {
             <LayoutDashboard className="w-5 h-5" /> Productos
           </button>
           <button
-            onClick={() => setCurrentView('admin-ries')}
+            onClick={() => setCurrentView('admin-categories')}
             className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${currentView === 'admin-categories' ? 'text-black' : 'text-slate-500'}`}
           >
             <LayoutList className="w-5 h-5" /> Categorías
@@ -188,7 +183,6 @@ function PublicCatalogView() {
     );
   }
 
-  // FILTRAMOS PRODUCTOS Y CATEGORÍAS PARA LA TIENDA PÚBLICA
   const storeProducts = catalog.products.filter(p => p.storeId === store.id);
   const storeCategories = catalog.categories.filter(c => c.storeId === store.id);
 
