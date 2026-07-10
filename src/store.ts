@@ -184,7 +184,13 @@ class CatalogStore {
     const { error: catError } = await supabase.from('categories').update(updatedData).eq('id', id);
     if (catError) alert(`Error actualizando categoría: ${catError.message}`);
   }
-  
+  // ¡ESTO FALTABA!
+  deleteCategory = async (id: string) => {
+    this.categories = this.categories.filter(c => c.id !== id);
+    this.notify();
+    await supabase.from('categories').delete().eq('id', id);
+  }
+}
 export const catalogStore = new CatalogStore();
 
 export function useCatalog() {
