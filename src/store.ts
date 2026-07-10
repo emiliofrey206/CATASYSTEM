@@ -128,12 +128,17 @@ class CatalogStore {
   }
 
   // --- CATEGORÍAS ---
-  addCategory = async (name: string) => {
-    const trimmed = name.trim();
+  addCategory = async (categoryData: Omit<Category, 'id' | 'storeId'>) => {
+    const trimmed = categoryData.name.trim();
     if (!trimmed) return;
 
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
-    const newCategory = { id: `cat-${Date.now()}`, storeId, name: trimmed };
+    const newCategory = { 
+      ...categoryData,
+      id: `cat-${Date.now()}`, 
+      storeId, 
+      name: trimmed 
+    };
     
     this.categories = [...this.categories, newCategory];
     this.notify();
@@ -142,46 +147,44 @@ class CatalogStore {
     if (error) alert(`Error guardando categoría: ${error.message}`);
   }
 
-  // FUNCIÓN INTELIGENTE EN CASCADA
-  updateCategory = async (id: string, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed) return;
-
+  // FUNCIÓN INTELIGENTE EN CASCADA ACTUALIZADA
+  updateCategory = async (id: string, updatedData: Partial<Category>) => {
     // 1. Buscamos cuál era el nombre viejo de la categoría antes del cambio
     const oldCategory = this.categories.find(c => c.id === id);
-    if (!oldCategory || oldCategory.name === trimmed) return;
+    if (!oldCategory) return;
     const oldName = oldCategory.name;
 
+    // Si enviaron un nombre nuevo, lo limpiamos de espacios
+    if (updatedData.name) {
+      updatedData.name = updatedData.name.trim();
+    }
+
     // 2. Actualizamos la categoría en la memoria visual
-    this.categories = this.categories.map(c => c.id === id ? { ...c, name: trimmed } : c);
+    this.categories = this.categories.map(c => c.id === id ? { ...c, ...updatedData } : c);
     
-    // 3. MAGIA: Actualizamos TODOS los productos vinculados a esa categoría instantáneamente
-    this.products = this.products.map(p => 
-      p.category === oldName && p.storeId === oldCategory.storeId 
-        ? { ...p, category: trimmed } 
-        : p
-    );
+    // 3. MAGIA: Si el nombre cambió, actualizamos los productos vinculados
+    if (updatedData.name && updatedData.name !== oldName) {
+      const newName = updatedData.name;
+      this.products = this.products.map(p => 
+        p.category === oldName && p.storeId === oldCategory.storeId 
+          ? { ...p, category: newName } 
+          : p
+      );
+      
+      // Le avisamos a Supabase que actualice los productos
+      await supabase.from('products')
+        .update({ category: newName })
+        .eq('category', oldName)
+        .eq('storeId', oldCategory.storeId);
+    }
     
     this.notify();
 
-    // 4. Guardamos el nuevo nombre de la categoría en Supabase
-    const { error: catError } = await supabase.from('categories').update({ name: trimmed }).eq('id', id);
+    // 4. Guardamos todos los nuevos datos de la categoría en Supabase
+    const { error: catError } = await supabase.from('categories').update(updatedData).eq('id', id);
     if (catError) alert(`Error actualizando categoría: ${catError.message}`);
-
-    // 5. Le avisamos a Supabase que actualice todos los productos huerfános
-    await supabase.from('products')
-      .update({ category: trimmed })
-      .eq('category', oldName)
-      .eq('storeId', oldCategory.storeId);
   }
-
-  deleteCategory = async (id: string) => {
-    this.categories = this.categories.filter(c => c.id !== id);
-    this.notify();
-    await supabase.from('categories').delete().eq('id', id);
-  }
-}
-
+  
 export const catalogStore = new CatalogStore();
 
 export function useCatalog() {
