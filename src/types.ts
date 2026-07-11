@@ -6,6 +6,13 @@ export interface Store {
   logoUrl?: string; // NUEVO: Soporte para el logo de la tienda
 }
 
+export interface Color {
+  id: string;
+  storeId: string;
+  name: string;
+  hexCode: string;
+}
+
 export interface ProductVariant {
   color: string;
   colorCode?: string;
