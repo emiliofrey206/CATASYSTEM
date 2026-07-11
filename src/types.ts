@@ -6,6 +6,11 @@ export interface Store {
   logoUrl?: string; // NUEVO: Soporte para el logo de la tienda
 }
 
+export interface ProductVariant {
+  color: string;
+  imageUrl: string;
+}
+
 export interface Product {
   id: string;
   storeId: string;
@@ -15,6 +20,7 @@ export interface Product {
   category: string;
   imageUrl: string;
   inStock: boolean;
+  variants?: ProductVariant[];
 }
 
 export interface Category {
