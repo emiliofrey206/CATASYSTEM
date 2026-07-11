@@ -8,6 +8,7 @@ export interface Store {
 
 export interface ProductVariant {
   color: string;
+  colorCode?: string;
   imageUrl: string;
 }
 
