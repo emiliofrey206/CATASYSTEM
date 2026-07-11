@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Product, Category, Store } from './types';
+import { Product, Category, Store, Color } from './types';
 import { supabase } from './supabase';
 
 class CatalogStore {
   stores: Store[] = [];
   products: Product[] = [];
-  categories: Category[] = []; // Ahora es un arreglo de objetos reales
+  categories: Category[] = [];
+  colors: Color[] = []; // NUEVO: Arreglo de colores globales
   isLoaded = false;
   isAuthenticated = false;
   activeStoreId: string = '';
@@ -25,13 +26,17 @@ class CatalogStore {
       const { data: productsData, error: productsError } = await supabase.from('products').select('*').order('created_at', { ascending: false });
       if (productsError) throw productsError;
 
-      // NUEVO: Cargamos las categorías desde Supabase
       const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
       if (categoriesError) throw categoriesError;
+
+      // NUEVO: Cargamos los colores desde Supabase
+      const { data: colorsData, error: colorsError } = await supabase.from('colors').select('*').order('name', { ascending: true });
+      if (colorsError) throw colorsError;
 
       this.stores = storesData || [];
       this.products = productsData || [];
       this.categories = categoriesData || [];
+      this.colors = colorsData || [];
 
       if (this.stores.length > 0 && !this.activeStoreId) {
         this.activeStoreId = this.stores[0].id;
@@ -39,7 +44,7 @@ class CatalogStore {
     } catch (error: any) {
       console.error("Error cargando datos de Supabase:", error);
       alert(`Error al conectar con Supabase: ${error.message || error}`);
-    } finally {
+    } {
       this.isLoaded = true;
       this.notify();
     }
@@ -133,12 +138,7 @@ class CatalogStore {
     if (!trimmed) return;
 
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
-    const newCategory = { 
-      ...categoryData,
-      id: `cat-${Date.now()}`, 
-      storeId, 
-      name: trimmed 
-    };
+    const newCategory = { ...categoryData, id: `cat-${Date.now()}`, storeId, name: trimmed };
     
     this.categories = [...this.categories, newCategory];
     this.notify();
@@ -147,58 +147,57 @@ class CatalogStore {
     if (error) alert(`Error guardando categoría: ${error.message}`);
   }
 
-  // FUNCIÓN INTELIGENTE EN CASCADA ACTUALIZADA
   updateCategory = async (id: string, updatedData: Partial<Category>) => {
-    // 1. Buscamos cuál era el nombre viejo de la categoría antes del cambio
     const oldCategory = this.categories.find(c => c.id === id);
     if (!oldCategory) return;
     const oldName = oldCategory.name;
 
-    // Si enviaron un nombre nuevo, lo limpiamos de espacios
-    if (updatedData.name) {
-      updatedData.name = updatedData.name.trim();
-    }
+    if (updatedData.name) updatedData.name = updatedData.name.trim();
 
-    // 2. Actualizamos la categoría en la memoria visual
     this.categories = this.categories.map(c => c.id === id ? { ...c, ...updatedData } : c);
     
-    // 3. MAGIA: Si el nombre cambió, actualizamos los productos vinculados
     if (updatedData.name && updatedData.name !== oldName) {
       const newName = updatedData.name;
-      this.products = this.products.map(p => 
-        p.category === oldName && p.storeId === oldCategory.storeId 
-          ? { ...p, category: newName } 
-          : p
-      );
-      
-      // Le avisamos a Supabase que actualice los productos
-      await supabase.from('products')
-        .update({ category: newName })
-        .eq('category', oldName)
-        .eq('storeId', oldCategory.storeId);
+      this.products = this.products.map(p => p.category === oldName && p.storeId === oldCategory.storeId ? { ...p, category: newName } : p);
+      await supabase.from('products').update({ category: newName }).eq('category', oldName).eq('storeId', oldCategory.storeId);
     }
     
     this.notify();
-
-    // 4. Guardamos todos los nuevos datos de la categoría en Supabase
     const { error: catError } = await supabase.from('categories').update(updatedData).eq('id', id);
     if (catError) alert(`Error actualizando categoría: ${catError.message}`);
   }
-  // ¡ESTO FALTABA!
+  
   deleteCategory = async (id: string) => {
     this.categories = this.categories.filter(c => c.id !== id);
     this.notify();
     await supabase.from('categories').delete().eq('id', id);
   }
+
+  // --- NUEVO: GESTIÓN DE COLORES PREDEFINIDOS ---
+  addColor = async (colorData: Omit<Color, 'id' | 'storeId'>) => {
+    const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
+    const newColor = { ...colorData, id: `col-${Date.now()}`, storeId };
+    
+    this.colors = [...this.colors, newColor];
+    this.notify();
+
+    const { error } = await supabase.from('colors').insert([newColor]);
+    if (error) alert(`Error guardando color: ${error.message}`);
+  }
+
+  deleteColor = async (id: string) => {
+    this.colors = this.colors.filter(c => c.id !== id);
+    this.notify();
+    await supabase.from('colors').delete().eq('id', id);
+  }
 }
+
 export const catalogStore = new CatalogStore();
 
 export function useCatalog() {
   const [, setTick] = useState(0);
-
   useEffect(() => {
     return catalogStore.subscribe(() => setTick(t => t + 1));
   }, []);
-
   return catalogStore;
 }
