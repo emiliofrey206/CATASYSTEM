@@ -76,16 +76,16 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200 relative pb-20 lg:pb-0">
       
-      <header className="flex items-center justify-between h-24 px-6 sm:px-8 max-w-7xl mx-auto mb-4 shrink-0">
-        <div className="flex items-center gap-4">
+      <header className="flex items-center justify-between h-24 px-4 sm:px-8 max-w-7xl mx-auto mb-4 shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4">
           {store.logoUrl ? (
-            <img src={store.logoUrl} alt={store.name} className="w-14 h-14 md:w-16 md:h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" />
+            <img src={store.logoUrl} alt={store.name} className="w-12 h-12 md:w-16 md:h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" />
           ) : (
-            <div className="w-14 h-14 md:w-16 md:h-16 bg-black rounded-2xl flex items-center justify-center shadow-sm">
-              <ShoppingBag className="h-7 w-7 text-white" />
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-black rounded-2xl flex items-center justify-center shadow-sm">
+              <ShoppingBag className="h-6 w-6 md:h-7 md:w-7 text-white" />
             </div>
           )}
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase text-slate-900 truncate max-w-[200px] sm:max-w-md">
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight uppercase text-slate-900 truncate max-w-[180px] sm:max-w-md">
             {store.name}
           </h1>
         </div>
@@ -150,7 +150,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                   </div>
                 </div>
 
-                {/* AQUÍ ESTÁ LA MAGIA DE LA CUADRÍCULA: grid-cols-2 */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-5">
                   {categories.map(cat => (
                     <button
@@ -165,7 +164,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                           <ImageIcon className="w-8 h-8 text-slate-300" />
                         </div>
                       )}
-                      {/* Gradiente oscuro para que el texto resalte */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3 sm:p-5 text-left">
                         <h3 className="text-white font-bold text-sm sm:text-lg leading-tight drop-shadow-md">
                           {cat.name}
@@ -184,7 +182,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
               </motion.div>
             ) : (
               
-              /* VISTA DE PRODUCTOS */
+              /* VISTA DE PRODUCTOS (AHORA MÁS ANGOSTOS: 2 en móvil, 3 en tablet, 4 en PC) */
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div className="flex items-center justify-between px-2">
                   <div>
@@ -199,7 +197,8 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                 </div>
 
                 {filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  /* --- LÍNEA CLAVE ACTUALIZADA AQUÍ ABAJO --- */
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map((product) => (
                         <motion.div key={product.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}>
