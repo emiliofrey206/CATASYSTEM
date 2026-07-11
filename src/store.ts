@@ -6,7 +6,7 @@ class CatalogStore {
   stores: Store[] = [];
   products: Product[] = [];
   categories: Category[] = [];
-  colors: Color[] = []; // NUEVO: Arreglo de colores globales
+  colors: Color[] = [];
   isLoaded = false;
   isAuthenticated = false;
   activeStoreId: string = '';
@@ -16,6 +16,22 @@ class CatalogStore {
   constructor() {
     this.isAuthenticated = sessionStorage.getItem('catalog_auth') === 'true';
     this.loadFromSupabase();
+    this.setupRealtime(); // Iniciamos el radar de tiempo real
+  }
+
+  // --- LÓGICA DE TIEMPO REAL ---
+  setupRealtime() {
+    supabase.channel('catalog-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        this.loadFromSupabase(); // Si hay cambio en productos, recarga silenciosamente
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        this.loadFromSupabase(); // Si hay cambio en categorías, recarga silenciosamente
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'colors' }, () => {
+        this.loadFromSupabase();
+      })
+      .subscribe();
   }
 
   async loadFromSupabase() {
@@ -29,7 +45,6 @@ class CatalogStore {
       const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
       if (categoriesError) throw categoriesError;
 
-      // NUEVO: Cargamos los colores desde Supabase
       const { data: colorsData, error: colorsError } = await supabase.from('colors').select('*').order('name', { ascending: true });
       if (colorsError) throw colorsError;
 
@@ -43,8 +58,7 @@ class CatalogStore {
       }
     } catch (error: any) {
       console.error("Error cargando datos de Supabase:", error);
-      alert(`Error al conectar con Supabase: ${error.message || error}`);
-    } {
+    } finally {
       this.isLoaded = true;
       this.notify();
     }
@@ -80,13 +94,11 @@ class CatalogStore {
     this.notify();
   }
 
-  // --- TIENDAS ---
   addStore = async (store: Omit<Store, 'id'>) => {
     const newStore = { ...store, id: `store-${Date.now()}` };
     this.stores = [...this.stores, newStore];
     this.activeStoreId = newStore.id;
     this.notify();
-    
     const { error } = await supabase.from('stores').insert([newStore]);
     if (error) alert(`Error guardando tienda: ${error.message}`);
   }
@@ -95,23 +107,22 @@ class CatalogStore {
     this.stores = this.stores.map(s => s.id === id ? { ...s, ...updatedData } : s);
     this.notify();
     const { error } = await supabase.from('stores').update(updatedData).eq('id', id);
-    if (error) alert(`Error actualizando tienda: ${error.message}`);
+    if (error) alert(`Error actualizando: ${error.message}`);
   }
 
   deleteStore = async (id: string) => {
     this.stores = this.stores.filter(s => s.id !== id);
-    if (this.activeStoreId === id && this.stores.length > 0) {
-      this.activeStoreId = this.stores[0].id;
-    }
+    if (this.activeStoreId === id && this.stores.length > 0) this.activeStoreId = this.stores[0].id;
     this.notify();
     await supabase.from('stores').delete().eq('id', id);
   }
 
-  // --- PRODUCTOS ---
   addProduct = async (product: Omit<Product, 'id' | 'storeId'>) => {
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
     const newProduct = { ...product, id: `prod-${Date.now()}`, storeId };
     
+    // Lo agregamos a la vista temporalmente para que se sienta instantáneo,
+    // el Realtime se encargará de sincronizar si hay otros dispositivos.
     this.products = [newProduct, ...this.products];
     this.notify();
     
@@ -132,17 +143,13 @@ class CatalogStore {
     await supabase.from('products').delete().eq('id', id);
   }
 
-  // --- CATEGORÍAS ---
   addCategory = async (categoryData: Omit<Category, 'id' | 'storeId'>) => {
     const trimmed = categoryData.name.trim();
     if (!trimmed) return;
-
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
     const newCategory = { ...categoryData, id: `cat-${Date.now()}`, storeId, name: trimmed };
-    
     this.categories = [...this.categories, newCategory];
     this.notify();
-
     const { error } = await supabase.from('categories').insert([newCategory]);
     if (error) alert(`Error guardando categoría: ${error.message}`);
   }
@@ -173,14 +180,11 @@ class CatalogStore {
     await supabase.from('categories').delete().eq('id', id);
   }
 
-  // --- NUEVO: GESTIÓN DE COLORES PREDEFINIDOS ---
   addColor = async (colorData: Omit<Color, 'id' | 'storeId'>) => {
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
     const newColor = { ...colorData, id: `col-${Date.now()}`, storeId };
-    
     this.colors = [...this.colors, newColor];
     this.notify();
-
     const { error } = await supabase.from('colors').insert([newColor]);
     if (error) alert(`Error guardando color: ${error.message}`);
   }
