@@ -7,27 +7,26 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  // Estados para manejar la interactividad de la tarjeta
+  // Por defecto, muestra la foto principal. Si hay colores, podemos cambiarla.
   const [activeImage, setActiveImage] = useState(product.imageUrl);
   const [activeColor, setActiveColor] = useState<string | null>(null);
 
-  const handleVariantClick = (color: string, imageUrl: string) => {
-    if (activeColor === color) {
-      // Si el cliente vuelve a tocar el mismo color, lo deseleccionamos y vuelve a la foto de portada
+  const handleVariantClick = (colorName: string, imageUrl: string) => {
+    if (activeColor === colorName) {
       setActiveColor(null);
       setActiveImage(product.imageUrl);
     } else {
-      // Cambiamos al nuevo color y mostramos su foto (si no tiene foto propia, mostramos la principal)
-      setActiveColor(color);
-      setActiveImage(imageUrl || product.imageUrl);
+      setActiveColor(colorName);
+      // Si el color no tiene foto propia, mantenemos la portada
+      setActiveImage(imageUrl || product.imageUrl); 
     }
   };
 
   return (
     <div className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col h-full group">
       
-      {/* SECCIÓN VISUAL (FOTO PRINCIPAL O VARIANTE) */}
-      <div className="relative aspect-[4/3] bg-slate-50 overflow-hidden shrink-0">
+      {/* SECCIÓN VISUAL (MÁS ANGOSTA Y ALTA) */}
+      <div className="relative aspect-[4/5] bg-slate-50 overflow-hidden shrink-0">
         {activeImage ? (
           <img 
             src={activeImage} 
@@ -40,7 +39,6 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
         
-        {/* Etiqueta de Agotado */}
         {!product.inStock && (
           <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider shadow-md">
             Agotado
@@ -58,27 +56,30 @@ export function ProductCard({ product }: ProductCardProps) {
           <p className="text-sm text-slate-500 mt-2 line-clamp-2 leading-relaxed">{product.description}</p>
         </div>
 
-        {/* MAGIA: SELECTOR DE COLORES DINÁMICO */}
+        {/* MAGIA: CÍRCULOS DE COLORES VISUALES */}
         {product.variants && product.variants.length > 0 && (
           <div className="mt-5 pt-4 border-t border-slate-50">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">
-              Elige un color:
-            </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2.5">
               {product.variants.map((variant, idx) => (
                 <button
                   key={idx}
+                  title={variant.color} // Muestra el nombre ("Dorado") si dejan el mouse encima
                   onClick={() => handleVariantClick(variant.color, variant.imageUrl)}
-                  className={`text-[11px] font-bold uppercase px-3 py-1.5 rounded-xl border transition-all active:scale-95 ${
+                  className={`w-6 h-6 rounded-full transition-all active:scale-95 ${
                     activeColor === variant.color 
-                      ? 'border-black bg-black text-white shadow-md' 
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'ring-2 ring-black ring-offset-2 scale-110 shadow-sm' 
+                      : 'border border-slate-200 hover:scale-110 shadow-sm'
                   }`}
-                >
-                  {variant.color}
-                </button>
+                  style={{ backgroundColor: variant.colorCode || '#e2e8f0' }}
+                />
               ))}
             </div>
+            {/* Pequeño texto dinámico que dice qué color seleccionaste */}
+            {activeColor && (
+              <p className="text-[10px] font-bold text-slate-400 uppercase mt-2">
+                Color: <span className="text-slate-700">{activeColor}</span>
+              </p>
+            )}
           </div>
         )}
 
@@ -89,14 +90,13 @@ export function ProductCard({ product }: ProductCardProps) {
           </span>
           <button 
             disabled={!product.inStock}
-            className="w-12 h-12 rounded-[1.25rem] bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/20 transition-all disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none active:scale-95"
+            className="w-12 h-12 rounded-[1.25rem] bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/20 transition-all disabled:opacity-50 disabled:bg-slate-300 active:scale-95"
             title="Añadir"
           >
             <ShoppingBag className="w-5 h-5" />
           </button>
         </div>
       </div>
-      
     </div>
   );
 }
