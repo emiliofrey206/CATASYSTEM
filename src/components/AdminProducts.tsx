@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, X, Filter, Image as ImageIcon, Loader2, Palette } from 'lucide-react';
-import { Product, Category, Store, ProductVariant } from '../types';
+import { Product, Category, Store, ProductVariant, Color } from '../types';
 import { supabase } from '../supabase';
 
 interface AdminProductsProps {
   activeStore: Store; 
   products: Product[];
   categories: Category[];
+  colors: Color[]; // NUEVO: Lista de colores guardados
   addProduct: (p: Omit<Product, 'id' | 'storeId'>) => void;
   updateProduct: (id: string, p: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
@@ -14,12 +15,11 @@ interface AdminProductsProps {
 
 interface VariantFormItem {
   id: string;
-  color: string;
-  colorCode: string; // Agregado aquí
+  colorId: string; // Para vincularlo con el muestrario
   imageUrl: string;
 }
 
-export function AdminProducts({ activeStore, products, categories, addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
+export function AdminProducts({ activeStore, products, categories, colors = [], addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('Todas');
@@ -44,19 +44,25 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     
     if (product) {
       setEditingId(product.id);
+      
+      // Vinculamos las variantes guardadas de vuelta con sus colorId correspondientes
+      const mappedVariants = product.variants?.map(v => {
+        const matchedColor = colors.find(c => c.name.toLowerCase() === v.color.toLowerCase());
+        return {
+          id: Math.random().toString(),
+          colorId: matchedColor ? matchedColor.id : '',
+          imageUrl: v.imageUrl
+        };
+      }) || [];
+
       setFormData({
         name: product.name,
         description: product.description,
         price: product.price.toString(),
         category: product.category,
-        imageUrl: product.imageUrl,
+        imageUrl: product.imageUrl || '',
         inStock: product.inStock,
-        variants: product.variants?.map(v => ({ 
-          id: Math.random().toString(), 
-          color: v.color, 
-          colorCode: v.colorCode || '#cccccc', 
-          imageUrl: v.imageUrl 
-        })) || []
+        variants: mappedVariants
       });
     } else {
       setEditingId(null);
@@ -79,7 +85,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
   const addVariant = () => {
     setFormData({
       ...formData,
-      variants: [...formData.variants, { id: Math.random().toString(), color: '', colorCode: '#cccccc', imageUrl: '' }]
+      variants: [...formData.variants, { id: Math.random().toString(), colorId: colors[0]?.id || '', imageUrl: '' }]
     });
   };
 
@@ -90,10 +96,10 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     setVariantFiles(newVariantFiles);
   };
 
-  const updateVariantField = (id: string, field: keyof VariantFormItem, value: string) => {
+  const updateVariantColorId = (id: string, colorId: string) => {
     setFormData({
       ...formData,
-      variants: formData.variants.map(v => v.id === id ? { ...v, [field]: value } : v)
+      variants: formData.variants.map(v => v.id === id ? { ...v, colorId } : v)
     });
   };
 
@@ -101,7 +107,10 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     const file = e.target.files?.[0];
     if (file) {
       setVariantFiles(prev => ({ ...prev, [id]: file }));
-      updateVariantField(id, 'imageUrl', URL.createObjectURL(file));
+      setFormData({
+        ...formData,
+        variants: formData.variants.map(v => v.id === id ? { ...v, imageUrl: URL.createObjectURL(file) } : v)
+      });
     }
   };
 
@@ -120,26 +129,41 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
     setIsUploading(true);
 
     try {
-      let finalMainImageUrl = formData.imageUrl;
-      if (imageFile) finalMainImageUrl = await uploadFileToSupabase(imageFile);
-
+      // 1. Procesar imágenes de variantes primero
       const finalVariants: ProductVariant[] = [];
       for (const variant of formData.variants) {
-        if (!variant.color.trim()) continue;
+        const matchedColorObj = colors.find(c => c.id === variant.colorId);
+        if (!matchedColorObj) continue;
+
         let vImageUrl = variant.imageUrl;
         if (variantFiles[variant.id]) {
           vImageUrl = await uploadFileToSupabase(variantFiles[variant.id]);
         }
+
         finalVariants.push({
-          color: variant.color.trim(),
-          colorCode: variant.colorCode,
+          color: matchedColorObj.name,
+          colorCode: matchedColorObj.hexCode,
           imageUrl: vImageUrl
         });
       }
 
+      // 2. Subir imagen principal si existe
+      let finalMainImageUrl = formData.imageUrl;
+      if (imageFile) {
+        finalMainImageUrl = await uploadFileToSupabase(imageFile);
+      } 
+      // LÓGICA INTELIGENTE: Si no subió portada, pero hay variantes, usa la foto de la primera variante
+      else if (!finalMainImageUrl && finalVariants.length > 0) {
+        finalMainImageUrl = finalVariants[0].imageUrl;
+      }
+
       const productData = {
-        name: formData.name, description: formData.description, price: parseFloat(formData.price) || 0,
-        category: formData.category, imageUrl: finalMainImageUrl, inStock: formData.inStock,
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price) || 0,
+        category: formData.category,
+        imageUrl: finalMainImageUrl, // Podría guardarse vacío si el usuario no pone nada ni variantes, la card se protegerá sola
+        inStock: formData.inStock,
         variants: finalVariants.length > 0 ? finalVariants : undefined
       };
 
@@ -148,8 +172,8 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
       
       setIsModalOpen(false); setImageFile(null); setVariantFiles({});
     } catch (error: any) {
-      alert(`Error subiendo la imagen: ${error.message}`);
-    } finally {
+      alert(`Error guardando el producto: ${error.message}`);
+    } {
       setIsUploading(false);
     }
   };
@@ -163,7 +187,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 uppercase">Inventario de {activeStore.name}</h2>
-          <p className="text-sm text-slate-500 mt-1 hidden sm:block">Gestiona los catálogos y colores de tus productos.</p>
+          <p className="text-sm text-slate-500 mt-1 hidden sm:block">Gestiona catálogos e imágenes por variante.</p>
         </div>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
@@ -171,29 +195,25 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Filter className="h-4 w-4 text-slate-400" />
             </div>
-            <select
-              value={selectedFilter}
-              onChange={(e) => setSelectedFilter(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 rounded-xl pl-9 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-black/5 cursor-pointer appearance-none"
-            >
+            <select value={selectedFilter} onChange={(e) => setSelectedFilter(e.target.value)} className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 rounded-xl pl-9 pr-8 py-2.5 outline-none appearance-none cursor-pointer">
               <option value="Todas">Todas las categorías</option>
               {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
-
-          <button onClick={() => handleOpenModal()} className="w-full sm:w-auto bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shrink-0">
+          <button onClick={() => handleOpenModal()} className="w-full sm:w-auto bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
             <Plus className="w-4 h-4" /> Nuevo Producto
           </button>
         </div>
       </div>
 
+      {/* TABLA PRINCIPAL */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
               <th className="font-semibold pb-3 pl-2">Producto</th>
               <th className="font-semibold pb-3">Categoría</th>
-              <th className="font-semibold pb-3">Colores</th>
+              <th className="font-semibold pb-3">Muestrario</th>
               <th className="font-semibold pb-3">Precio</th>
               <th className="font-semibold pb-3">Estado</th>
               <th className="font-semibold pb-3 text-right pr-2">Acciones</th>
@@ -215,21 +235,19 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                   {product.variants && product.variants.length > 0 ? (
                     <div className="flex items-center gap-1.5 flex-wrap max-w-[150px]">
                       {product.variants.map((v, i) => (
-                        <div key={i} title={v.color} className="w-5 h-5 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: v.colorCode || '#ccc' }}></div>
+                        <div key={i} title={v.color} className="w-4 h-4 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: v.colorCode }} />
                       ))}
                     </div>
                   ) : <span className="text-slate-400 text-xs">Único</span>}
                 </td>
                 <td className="py-4 font-semibold text-base text-slate-900">${product.price.toFixed(2)}</td>
                 <td className="py-4">
-                  <span className={`inline-flex px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {product.inStock ? 'En Stock' : 'Agotado'}
-                  </span>
+                  <span className={`inline-flex px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{product.inStock ? 'En Stock' : 'Agotado'}</span>
                 </td>
                 <td className="py-4 pr-2 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => handleOpenModal(product)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => { if(confirm('¿Seguro que deseas eliminar este producto?')) deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleOpenModal(product)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => { if(confirm('¿Eliminar producto?')) deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </td>
               </tr>
@@ -238,6 +256,7 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
         </table>
       </div>
 
+      {/* VISTA TARJETAS MÓVIL */}
       <div className="md:hidden flex flex-col gap-3">
         {filteredProducts.map((product) => (
           <div key={product.id} className="bg-white border border-slate-100 rounded-2xl p-3 flex gap-4 items-center shadow-sm">
@@ -249,30 +268,28 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
               <p className="text-xs text-slate-500 truncate mt-0.5">{product.category}</p>
               {product.variants && product.variants.length > 0 && (
                 <div className="flex items-center gap-1 mt-1.5">
-                  {product.variants.map((v, i) => (
-                     <div key={i} className="w-3.5 h-3.5 rounded-full border border-slate-300" style={{ backgroundColor: v.colorCode || '#ccc' }}></div>
-                  ))}
+                  {product.variants.map((v, i) => <div key={i} className="w-3.5 h-3.5 rounded-full border border-slate-300" style={{ backgroundColor: v.colorCode }} />)}
                 </div>
               )}
               <div className="flex items-center gap-2 mt-2">
                 <span className="font-black text-slate-900 text-sm">${product.price.toFixed(2)}</span>
-                <span className={`inline-flex px-1.5 py-0.5 text-[9px] font-bold rounded-md uppercase tracking-wider ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{product.inStock ? 'Stock' : 'Agotado'}</span>
               </div>
             </div>
             <div className="flex flex-col gap-1 shrink-0 border-l border-slate-100 pl-3">
-              <button onClick={() => handleOpenModal(product)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil className="w-4 h-4" /></button>
-              <button onClick={() => { if(confirm('¿Eliminar producto?')) deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={() => handleOpenModal(product)} className="p-2 text-slate-400 hover:text-blue-600"><Pencil className="w-4 h-4" /></button>
+              <button onClick={() => { if(confirm('¿Eliminar?')) deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
         ))}
       </div>
 
+      {/* MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
               <h3 className="text-xl font-bold text-slate-900">{editingId ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} disabled={isUploading} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full"><X className="w-5 h-5" /></button>
+              <button type="button" onClick={() => setIsModalOpen(false)} disabled={isUploading} className="p-2 text-slate-400 hover:text-slate-900 rounded-full"><X className="w-5 h-5" /></button>
             </div>
             
             <div className="p-6 overflow-y-auto space-y-6">
@@ -301,14 +318,12 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                   <textarea required rows={2} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-black/5 resize-none" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Imagen Principal (Portada)</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Imagen de Portada (Opcional si usas colores)</label>
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <label className={`flex-1 cursor-pointer bg-white border border-slate-200 border-dashed rounded-xl px-4 py-3 text-center transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}>
-                        <span className="text-sm font-medium text-blue-600">Subir foto local</span>
-                        <input type="file" accept="image/*" className="hidden" onChange={handleMainImageUpload} disabled={isUploading} />
-                      </label>
-                    </div>
+                    <label className={`cursor-pointer bg-white border border-slate-200 border-dashed rounded-xl px-4 py-3 text-center transition-colors ${isUploading ? 'opacity-50' : 'hover:bg-slate-50'}`}>
+                      <span className="text-sm font-medium text-blue-600">Subir foto local</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleMainImageUpload} disabled={isUploading} />
+                    </label>
                     {formData.imageUrl && (
                       <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
                         <img src={formData.imageUrl} alt="Portada" className="w-full h-full object-cover" />
@@ -318,71 +333,62 @@ export function AdminProducts({ activeStore, products, categories, addProduct, u
                 </div>
               </div>
 
+              {/* SECCIÓN VARIANTES UTILIZANDO EL DICCIONARIO */}
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <Palette className="w-4 h-4 text-blue-600" /> Colores Disponibles
+                    <Palette className="w-4 h-4 text-blue-600" /> Variantes por Color
                   </h4>
-                  <button type="button" onClick={addVariant} disabled={isUploading} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
-                    + Agregar Color
-                  </button>
+                  {colors.length > 0 ? (
+                    <button type="button" onClick={addVariant} disabled={isUploading} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">
+                      + Asignar Color
+                    </button>
+                  ) : (
+                    <span className="text-xs text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded-lg">Registra colores primero en el menú lateral</span>
+                  )}
                 </div>
 
-                {formData.variants.length > 0 ? (
+                {formData.variants.length > 0 && (
                   <div className="space-y-3">
-                    {formData.variants.map((variant) => (
-                      <div key={variant.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row gap-4 relative">
-                        <div className="w-full sm:w-1/2">
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tono y Nombre</label>
-                          <div className="flex gap-2">
-                            {/* EL GOTERO DE COLOR */}
-                            <input 
-                              type="color" 
-                              value={variant.colorCode} 
-                              onChange={(e) => updateVariantField(variant.id, 'colorCode', e.target.value)} 
-                              className="w-10 h-10 p-0 border-0 rounded-lg cursor-pointer shrink-0" 
-                              title="Elige el color visual"
-                            />
-                            <input 
-                              type="text" 
-                              placeholder="Ej. Dorado" 
-                              value={variant.color} 
-                              onChange={(e) => updateVariantField(variant.id, 'color', e.target.value)} 
-                              disabled={isUploading} 
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
-                              required 
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="flex-1 flex items-start gap-3">
-                          <div className="flex-1">
-                             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Foto de este color</label>
-                             <label className="cursor-pointer bg-white border border-slate-200 rounded-lg px-3 py-2 text-center text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors block w-full">
-                                Subir Foto
-                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleVariantImageUpload(variant.id, e)} disabled={isUploading} />
-                             </label>
-                          </div>
-                          {variant.imageUrl && (
-                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-white shrink-0 mt-5">
-                              <img src={variant.imageUrl} alt={variant.color} className="w-full h-full object-cover" />
+                    {formData.variants.map((variant) => {
+                      const currentSelectedColor = colors.find(c => c.id === variant.colorId);
+                      return (
+                        <div key={variant.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row gap-4 relative items-center">
+                          <div className="w-full sm:w-1/2">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Selecciona el Color</label>
+                            <div className="flex gap-2 items-center">
+                              <div className="w-6 h-6 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: currentSelectedColor?.hexCode || '#ccc' }} />
+                              <select value={variant.colorId} onChange={(e) => updateVariantColorId(variant.id, e.target.value)} disabled={isUploading} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
+                                {colors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              </select>
                             </div>
-                          )}
+                          </div>
+                          
+                          <div className="flex-1 flex items-center gap-3 w-full">
+                            <div className="flex-1">
+                               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Foto para esta variante</label>
+                               <label className="cursor-pointer bg-white border border-slate-200 rounded-lg px-3 py-2 text-center text-xs font-bold text-slate-700 hover:bg-slate-100 block w-full">
+                                  Subir Foto de Variante
+                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleVariantImageUpload(variant.id, e)} disabled={isUploading} required={!formData.imageUrl && formData.variants[0]?.id === variant.id} />
+                               </label>
+                            </div>
+                            {variant.imageUrl && (
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-white shrink-0">
+                                <img src={variant.imageUrl} alt="Variante" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                          </div>
+                          <button type="button" onClick={() => removeVariant(variant.id)} disabled={isUploading} className="absolute -top-2 -right-2 bg-white border border-slate-200 text-slate-400 p-1.5 rounded-full hover:text-red-600"><X className="w-3 h-3" /></button>
                         </div>
-                        <button type="button" onClick={() => removeVariant(variant.id)} disabled={isUploading} className="absolute -top-2 -right-2 bg-white border border-slate-200 text-slate-400 p-1.5 rounded-full hover:text-red-600 hover:border-red-200 shadow-sm"><X className="w-3 h-3" /></button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                ) : (
-                  <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100 border-dashed">
-                    Si el producto viene en diferentes colores, añádelos aquí. (Si es único, ignora esto).
-                  </p>
                 )}
               </div>
 
               <div className="pt-4 border-t border-slate-100">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={formData.inStock} onChange={(e) => setFormData({...formData, inStock: e.target.checked})} disabled={isUploading} className="w-5 h-5 rounded border-slate-300 text-black focus:ring-black accent-black disabled:opacity-50" />
+                  <input type="checkbox" checked={formData.inStock} onChange={(e) => setFormData({...formData, inStock: e.target.checked})} disabled={isUploading} className="w-5 h-5 rounded border-slate-300 text-black accent-black" />
                   <span className="text-sm font-medium text-slate-700">Producto disponible (En Stock)</span>
                 </label>
               </div>
