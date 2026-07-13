@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ShoppingBag, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { Product } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
+  onAddToCart: (product: Product, color: string | null, image: string) => void;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const firstVariantImg = product.variants && product.variants.length > 0 ? product.variants[0].imageUrl : '';
   const firstVariantColor = product.variants && product.variants.length > 0 ? product.variants[0].color : null;
   
@@ -33,18 +34,15 @@ export function ProductCard({ product }: ProductCardProps) {
     return images;
   }, [product]);
 
-  // Bloquear scroll Y atrapar el botón Atrás cuando la galería se abre
   useEffect(() => {
     if (isGalleryOpen) {
       document.body.style.overflow = 'hidden';
-      document.body.dataset.galleryOpen = 'true'; // Le avisamos al catálogo padre
-      window.history.pushState({ view: 'gallery' }, ''); // Ponemos la trampa
+      document.body.dataset.galleryOpen = 'true';
+      window.history.pushState({ view: 'gallery' }, '');
       
-      const handleGalleryBack = () => {
-        setIsGalleryOpen(false);
-      };
-      
+      const handleGalleryBack = () => setIsGalleryOpen(false);
       window.addEventListener('popstate', handleGalleryBack);
+      
       return () => {
         window.removeEventListener('popstate', handleGalleryBack);
         document.body.style.overflow = 'auto';
@@ -88,10 +86,34 @@ export function ProductCard({ product }: ProductCardProps) {
     setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
   };
 
+  // Lógica para saber el estado real del stock
+  const actualStock = product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible');
+
   return (
     <>
-      <div className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col h-full group">
+      <div className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col h-full group relative">
         
+        {/* ETIQUETAS DE OFERTA Y STOCK SUPERIORES */}
+        <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
+          {product.isOffer && (
+            <div className="bg-red-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wider shadow-md flex items-center gap-1">
+              <Tag className="w-3 h-3" /> Oferta
+            </div>
+          )}
+          
+          <div className="ml-auto">
+            {actualStock === 'disponible' && (
+              <div className="bg-green-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wider shadow-md">Disponible</div>
+            )}
+            {actualStock === 'pocas_unidades' && (
+              <div className="bg-orange-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wider shadow-md">Pocas Unid.</div>
+            )}
+            {actualStock === 'agotado' && (
+              <div className="bg-red-600 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wider shadow-md">Agotado</div>
+            )}
+          </div>
+        </div>
+
         <div onClick={openGallery} className="relative aspect-square bg-slate-50 overflow-hidden shrink-0 cursor-pointer">
           {activeImage ? (
             <>
@@ -104,10 +126,6 @@ export function ProductCard({ product }: ProductCardProps) {
             </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon className="w-10 h-10" /></div>
-          )}
-          
-          {!product.inStock && (
-            <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider shadow-md">Agotado</div>
           )}
         </div>
 
@@ -134,28 +152,41 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          <div className="mt-5 pt-5 border-t border-slate-50 flex items-center justify-between">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">${product.price.toFixed(2)}</span>
-            <button disabled={!product.inStock} className="w-12 h-12 rounded-[1.25rem] bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all disabled:opacity-50 disabled:bg-slate-300 active:scale-95">
+          <div className="mt-5 pt-5 border-t border-slate-50 flex items-end justify-between">
+            {/* LÓGICA DE PRECIOS */}
+            <div>
+              {product.isOffer && product.offerPrice ? (
+                <div className="flex flex-col">
+                  <span className="text-xs text-slate-400 line-through font-semibold">${product.price.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-red-600 tracking-tight">${product.offerPrice.toFixed(2)}</span>
+                </div>
+              ) : (
+                <span className="text-2xl font-black text-slate-900 tracking-tight">${product.price.toFixed(2)}</span>
+              )}
+            </div>
+
+            <button 
+              disabled={actualStock === 'agotado'} 
+              onClick={() => onAddToCart(product, activeColor, activeImage || '')}
+              className="w-12 h-12 rounded-[1.25rem] bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all disabled:opacity-50 disabled:bg-slate-300 active:scale-95 shrink-0"
+              title="Añadir al carrito"
+            >
               <ShoppingBag className="w-5 h-5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* GALERÍA */}
       <AnimatePresence>
         {isGalleryOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md" onClick={() => setIsGalleryOpen(false)}>
             <button onClick={() => setIsGalleryOpen(false)} className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"><X className="w-6 h-6" /></button>
-
             {allImages.length > 1 && (
               <>
                 <button onClick={prevImage} className="absolute left-4 sm:left-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"><ChevronLeft className="w-8 h-8" /></button>
                 <button onClick={nextImage} className="absolute right-4 sm:right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"><ChevronRight className="w-8 h-8" /></button>
               </>
             )}
-
             <motion.div
               key={galleryIndex} 
               initial={{ opacity: 0, scale: 0.95 }}
