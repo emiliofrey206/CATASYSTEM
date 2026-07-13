@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, ShoppingBag, X, Image as ImageIcon } from 'lucide-react';
+import { Search, ShoppingBag, X, Image as ImageIcon, Menu } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { Product, Category, Store } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,29 +13,29 @@ interface PublicCatalogProps {
 export function PublicCatalog({ store, products, categories }: PublicCatalogProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Inicio');
+  
+  // Estados para menús móviles
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isSearchMobileOpen, setIsSearchMobileOpen] = useState(false);
 
   const handleSelectCategory = (catName: string) => {
     setSelectedCategory(catName);
     setSearchQuery('');
     setIsMobileFiltersOpen(false);
+    setIsSearchMobileOpen(false); // Cierra la búsqueda si estaba abierta
   };
 
-  // Filtro simple (coincidencia exacta)
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             product.description.toLowerCase().includes(searchQuery.toLowerCase());
-      
       const matchesCategory = selectedCategory === 'Todos' || selectedCategory === 'Inicio' || product.category === selectedCategory;
-      
       return matchesSearch && matchesCategory;
     });
   }, [products, searchQuery, selectedCategory]);
 
   const isHomeView = selectedCategory === 'Inicio' && searchQuery === '';
 
-  // Menú simple sin acordeones
   const CategoryNavigation = () => (
     <nav className="space-y-1.5">
       <button
@@ -74,23 +74,91 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200 relative pb-20 lg:pb-0">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200 relative pb-12 lg:pb-0">
       
-      <header className="flex items-center justify-between h-24 px-4 sm:px-8 max-w-7xl mx-auto mb-4 shrink-0">
-        <div className="flex items-center gap-3 sm:gap-4">
+      {/* =========================================
+          NUEVO HEADER MÓVIL (Boceto en Paint) 
+          ========================================= */}
+      <header className="lg:hidden flex items-center justify-between h-16 px-4 bg-white border-b border-slate-200 sticky top-0 z-40">
+        
+        {/* 1. Izquierda: Menú Hamburguesa */}
+        <button 
+          onClick={() => setIsMobileFiltersOpen(true)}
+          className="p-2 -ml-2 text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+
+        {/* 2. Centro: Logo y Nombre */}
+        <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2 cursor-pointer" onClick={() => handleSelectCategory('Inicio')}>
           {store.logoUrl ? (
-            <img src={store.logoUrl} alt={store.name} className="w-12 h-12 md:w-16 md:h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" />
+            <img src={store.logoUrl} alt={store.name} className="w-8 h-8 rounded-lg object-cover border border-slate-200 shadow-sm" />
           ) : (
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-black rounded-2xl flex items-center justify-center shadow-sm">
-              <ShoppingBag className="h-6 w-6 md:h-7 md:w-7 text-white" />
+            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center shadow-sm">
+              <ShoppingBag className="h-4 w-4 text-white" />
             </div>
           )}
-          <h1 className="text-2xl md:text-4xl font-black tracking-tight uppercase text-slate-900 truncate max-w-[180px] sm:max-w-md">
+          <h1 className="text-base font-black tracking-tight uppercase text-slate-900 truncate max-w-[120px] sm:max-w-[200px]">
             {store.name}
           </h1>
         </div>
 
-        <div className="hidden lg:flex items-center gap-4 flex-1 max-w-xl mx-8">
+        {/* 3. Derecha: Lupa de Búsqueda */}
+        <button 
+          onClick={() => {
+            setIsSearchMobileOpen(!isSearchMobileOpen);
+            if (!isSearchMobileOpen) setTimeout(() => document.getElementById('mobile-search')?.focus(), 100);
+          }}
+          className={`p-2 -mr-2 rounded-full transition-colors ${isSearchMobileOpen ? 'bg-slate-100 text-black' : 'text-slate-700 hover:bg-slate-100'}`}
+        >
+          {isSearchMobileOpen ? <X className="w-6 h-6" /> : <Search className="w-6 h-6" />}
+        </button>
+      </header>
+
+      {/* Barra de Búsqueda Desplegable (Móvil) */}
+      <AnimatePresence>
+        {isSearchMobileOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 sticky top-16 z-30 overflow-hidden shadow-sm"
+          >
+            <div className="relative">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                id="mobile-search"
+                type="text"
+                placeholder="Buscar productos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* =========================================
+          HEADER ESCRITORIO (Se oculta en móviles) 
+          ========================================= */}
+      <header className="hidden lg:flex items-center justify-between h-24 px-8 max-w-7xl mx-auto mb-4 shrink-0">
+        <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleSelectCategory('Inicio')}>
+          {store.logoUrl ? (
+            <img src={store.logoUrl} alt={store.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" />
+          ) : (
+            <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center shadow-sm">
+              <ShoppingBag className="h-7 w-7 text-white" />
+            </div>
+          )}
+          <h1 className="text-4xl font-black tracking-tight uppercase text-slate-900 truncate max-w-md">
+            {store.name}
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-4 flex-1 max-w-xl mx-8">
           <div className="relative w-full">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-slate-400" />
@@ -104,32 +172,9 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             />
           </div>
         </div>
-        
-        <div className="flex items-center gap-2 lg:hidden">
-          <button
-            onClick={() => setIsMobileFiltersOpen(true)}
-            className="flex h-10 items-center justify-center px-4 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors text-sm font-bold shadow-sm"
-          >
-            <Filter className="h-4 w-4 mr-2" /> Menú
-          </button>
-        </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12 h-full">
-        
-        <div className="mb-6 lg:hidden relative">
-          <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-            <Search className="h-4 w-4 text-slate-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar productos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full bg-white border border-slate-200 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 shadow-sm"
-          />
-        </div>
-
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 h-full">
         <div className="flex flex-col lg:flex-row lg:gap-8">
           
           <aside className="lg:w-72 flex-shrink-0 hidden lg:block">
@@ -140,16 +185,18 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
 
           <section className="flex-1">
             
-            {/* ESCAPARATE DE CATEGORÍAS (CUADRÍCULA 2 COLUMNAS) */}
+            {/* ESCAPARATE DE CATEGORÍAS (CUADRÍCULA) */}
             {isHomeView ? (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="flex items-center justify-between px-2">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
+                
+                <div className="hidden lg:flex items-center justify-between px-2">
                   <div>
                     <h2 className="text-2xl font-black text-slate-900">¿Qué estás buscando?</h2>
                     <p className="text-slate-500 text-sm mt-1">Explora nuestras categorías</p>
                   </div>
                 </div>
 
+                {/* Cuadrícula de categorías */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-5">
                   {categories.map(cat => (
                     <button
@@ -175,16 +222,16 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                 
                 <button
                   onClick={() => handleSelectCategory('Todos')}
-                  className="w-full mt-4 bg-slate-200 text-slate-800 px-5 py-4 rounded-2xl text-sm sm:text-base font-bold hover:bg-slate-300 transition-colors"
+                  className="w-full mt-2 bg-slate-200 text-slate-800 px-5 py-4 rounded-2xl text-sm sm:text-base font-bold hover:bg-slate-300 transition-colors"
                 >
                   Mostrar todos los productos
                 </button>
               </motion.div>
             ) : (
               
-              /* VISTA DE PRODUCTOS (AHORA MÁS ANGOSTOS: 2 en móvil, 3 en tablet, 4 en PC) */
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="flex items-center justify-between px-2">
+              /* VISTA DE PRODUCTOS */
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 sm:space-y-6">
+                <div className="flex items-center justify-between px-1 sm:px-2">
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
                       {searchQuery ? 'Resultados de búsqueda' : (selectedCategory === 'Todos' ? 'Todos los productos' : selectedCategory)}
@@ -197,7 +244,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                 </div>
 
                 {filteredProducts.length > 0 ? (
-                  /* --- LÍNEA CLAVE ACTUALIZADA AQUÍ ABAJO --- */
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map((product) => (
@@ -228,28 +274,34 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
-      {!isMobileFiltersOpen && (
-        <button
-          onClick={() => setIsMobileFiltersOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex lg:hidden items-center justify-center gap-2 rounded-full bg-black text-white px-5 py-3.5 shadow-xl shadow-black/20 hover:bg-slate-800 transition-transform active:scale-95 font-bold text-sm"
-        >
-          <Filter className="w-4 h-4" /> Menú
-        </button>
-      )}
-
+      {/* MENÚ LATERAL MÓVIL (REEMPLAZA AL BOTTOM SHEET) */}
       <AnimatePresence>
         {isMobileFiltersOpen && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center lg:hidden bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsMobileFiltersOpen(false)}>
+          <>
+            {/* Fondo Oscuro */}
             <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 lg:hidden"
+              onClick={() => setIsMobileFiltersOpen(false)}
+            />
+            
+            {/* Panel Lateral */}
+            <motion.div 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
               transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-              className="w-full bg-white rounded-t-[2rem] p-6 max-h-[85vh] flex flex-col shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-y-0 left-0 w-[80%] max-w-sm bg-white z-50 flex flex-col shadow-2xl lg:hidden"
             >
-              <div className="flex justify-between items-center mb-6 shrink-0">
-                <h3 className="text-xl font-black text-slate-900">Menú del Catálogo</h3>
+              <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
+                    <Menu className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 uppercase">Menú</h3>
+                </div>
                 <button
                   onClick={() => setIsMobileFiltersOpen(false)}
                   className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors bg-slate-50"
@@ -258,11 +310,11 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                 </button>
               </div>
               
-              <div className="overflow-y-auto pb-6">
+              <div className="overflow-y-auto p-4 flex-1">
                 <CategoryNavigation />
               </div>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
     </div>
