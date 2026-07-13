@@ -12,6 +12,7 @@ export interface Color {
   name: string;
   hexCode: string;
 }
+export type StockStatus = 'disponible' | 'pocas_unidades' | 'agotado';
 
 export interface ProductVariant {
   color: string;
@@ -27,7 +28,10 @@ export interface Product {
   price: number;
   category: string;
   imageUrl: string;
-  inStock: boolean;
+  inStock?: boolean; // Lo dejamos opcional por compatibilidad con datos viejos
+  stockStatus: StockStatus; // NUEVO: Control total de inventario
+  isOffer: boolean;         // NUEVO: Switch de Oferta
+  offerPrice?: number;      // NUEVO: Precio rebajado
   variants?: ProductVariant[];
 }
 
