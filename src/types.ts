@@ -4,6 +4,11 @@ export interface Store {
   slug: string;
   description?: string;
   logoUrl?: string; // NUEVO: Soporte para el logo de la tienda
+  headerColor?: string;
+  bgColor?: string;
+  cardColor?: string;
+  accentColor?: string;
+  textColor?: string;
 }
 
 export interface Color {
