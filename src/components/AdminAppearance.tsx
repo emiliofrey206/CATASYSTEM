@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Paintbrush, Save, Loader2, RefreshCcw } from 'lucide-react';
+import { Paintbrush, Save, Loader2, RefreshCcw, ShoppingBag } from 'lucide-react'; // ¡AQUÍ SE AGREGÓ SHOPPINGBAG!
 import { Store } from '../types';
 
 interface AdminAppearanceProps {
@@ -104,7 +104,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
           <span className="absolute top-4 left-4 text-xs font-black text-slate-400 uppercase tracking-widest">Vista Previa Móvil</span>
           
           {/* Celular Simulado */}
-          <div className="w-[280px] h-[500px] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-black flex flex-col mt-4" style={{ backgroundColor: colors.bgColor, color: colors.textColor }}>
+          <div className="w-[280px] h-[500px] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-black flex flex-col mt-4 relative" style={{ backgroundColor: colors.bgColor, color: colors.textColor }}>
             
             {/* Header Simulado */}
             <div className="h-14 flex items-center justify-between px-4 shrink-0 shadow-sm" style={{ backgroundColor: colors.headerColor }}>
@@ -121,7 +121,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
                   <div key={i} className="rounded-2xl p-2 shadow-sm" style={{ backgroundColor: colors.cardColor }}>
                     <div className="aspect-square bg-black/5 rounded-xl mb-2" />
                     <div className="w-2/3 h-2 rounded mb-3 opacity-60" style={{ backgroundColor: colors.textColor }} />
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center float-right shadow-md" style={{ backgroundColor: colors.accentColor }}>
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center float-right shadow-sm" style={{ backgroundColor: colors.accentColor }}>
                       <ShoppingBag className="w-3 h-3 text-white" />
                     </div>
                   </div>
@@ -130,7 +130,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
             </div>
 
             {/* Botón Flotante Simulado */}
-            <div className="absolute bottom-6 right-6 w-12 h-12 rounded-full shadow-lg" style={{ backgroundColor: colors.accentColor }} />
+            <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full shadow-lg" style={{ backgroundColor: colors.accentColor }} />
           </div>
         </div>
 
@@ -139,7 +139,6 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
   );
 }
 
-// Componente reutilizable para cada selector de color
 function ColorPicker({ label, value, onChange, desc }: { label: string, value: string, onChange: (v: string) => void, desc: string }) {
   return (
     <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
