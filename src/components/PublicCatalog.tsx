@@ -63,6 +63,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
     setIsSearchMobileOpen(false);
   };
 
+  // --- LÓGICA DEL CARRITO ---
   const handleAddToCart = (product: Product, color: string | null) => {
     setCart(prevCart => {
       const cartItemId = `${product.id}-${color || 'default'}`;
@@ -88,6 +89,14 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
 
   const removeCartItem = (id: string) => setCart(prev => prev.filter(item => item.id !== id));
 
+  // NUEVO: Función maestra para limpiar por completo el carrito
+  const handleClearCart = () => {
+    if (window.confirm('¿Estás seguro de que deseas vaciar por completo tu lista de compras?')) {
+      setCart([]);
+      setIsCartOpen(false); // Cierra el menú lateral automáticamente al vaciar
+    }
+  };
+
   const cartTotal = cart.reduce((acc, item) => {
     const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
     return acc + (price * item.quantity);
@@ -96,7 +105,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleCheckoutWhatsApp = () => {
-    // RECUERDA PONER TU NÚMERO AQUÍ
+    // RECUERDA COLOCAR TU NÚMERO DE TELÉFONO REAL AQUÍ
     const WHATSAPP_NUMBER = "584120000000"; 
     
     let text = `🛍️ *NUEVO PEDIDO - ${store.name}*\n\n`;
@@ -140,6 +149,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200 relative pb-24 lg:pb-0">
       
+      {/* HEADER MÓVIL */}
       <header className="lg:hidden flex items-center justify-between h-16 px-4 bg-white border-b border-slate-200 sticky top-0 z-40">
         <button onClick={() => { setIsMobileFiltersOpen(true); window.history.pushState({ view: 'menu' }, ''); }} className="p-2 -ml-2 text-slate-700 hover:bg-slate-100 rounded-full transition-colors">
           <Menu className="w-6 h-6" />
@@ -164,6 +174,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
+      {/* HEADER ESCRITORIO */}
       <header className="hidden lg:flex items-center justify-between h-24 px-8 max-w-7xl mx-auto mb-4 shrink-0">
         <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleSelectCategory('Inicio')}>
           {store.logoUrl ? <img src={store.logoUrl} alt={store.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" /> : <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center shadow-sm"><ShoppingBag className="h-7 w-7 text-white" /></div>}
@@ -238,6 +249,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
+      {/* BOTÓN FLOTANTE DEL CARRITO */}
       <AnimatePresence>
         {cartItemCount > 0 && !isCartOpen && (
           <motion.button
@@ -254,6 +266,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
+      {/* MENÚ MÓVIL CATEGORÍAS */}
       <AnimatePresence>
         {isMobileFiltersOpen && (
           <>
@@ -269,18 +282,32 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
+      {/* DRAWER DEL CARRITO DE COMPRAS */}
       <AnimatePresence>
         {isCartOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50" onClick={() => setIsCartOpen(false)} />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', bounce: 0, duration: 0.4 }} className="fixed inset-y-0 right-0 w-full max-w-md bg-white z-50 flex flex-col shadow-2xl">
               
+              {/* CABECERA MODIFICADA CON EL BOTÓN DE LIMPIAR/VACIAR */}
               <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0 bg-slate-50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center"><ShoppingCart className="w-5 h-5" /></div>
                   <h3 className="text-xl font-black text-slate-900">Tu Pedido</h3>
                 </div>
-                <button onClick={() => setIsCartOpen(false)} className="p-2 bg-white rounded-full border border-slate-200"><X className="w-5 h-5" /></button>
+                
+                <div className="flex items-center gap-2">
+                  {cart.length > 0 && (
+                    <button 
+                      onClick={handleClearCart} 
+                      className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors mr-1 shadow-sm border border-red-100/50"
+                      title="Vaciar todo el carrito"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Limpiar
+                    </button>
+                  )}
+                  <button onClick={() => setIsCartOpen(false)} className="p-2 bg-white rounded-full border border-slate-200 shadow-sm"><X className="w-5 h-5" /></button>
+                </div>
               </div>
               
               <div className="overflow-y-auto p-4 sm:p-6 flex-1 space-y-4 bg-slate-50/50">
@@ -293,12 +320,11 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                   cart.map(item => {
                     const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
                     
-                    // LÓGICA INTELIGENTE DE IMAGEN PARA EL CARRITO
                     let cartItemImage = item.product.imageUrl;
                     if (item.color && item.product.variants) {
                       const variantInfo = item.product.variants.find(v => v.color === item.color);
                       if (variantInfo && variantInfo.imageUrl) {
-                        cartItemImage = variantInfo.imageUrl; // Asigna la foto del color exacto
+                        cartItemImage = variantInfo.imageUrl;
                       }
                     }
                     if (!cartItemImage && item.product.variants && item.product.variants.length > 0) {
