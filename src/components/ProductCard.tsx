@@ -1,14 +1,20 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ShoppingBag, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
-import { Product } from '../types';
+import { Product, Store } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
+  store: Store; // NUEVO: La tarjeta ahora recibe la tienda para leer sus colores
   onAddToCart?: (product: Product, color: string | null) => void;
 }
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
+  // Extraemos los colores de la tienda (con valores por defecto por si acaso)
+  const cardColor = store.cardColor || '#ffffff';
+  const accentColor = store.accentColor || '#16a34a';
+  const textColor = store.textColor || '#0f172a';
+
   const firstVariantImg = product.variants && product.variants.length > 0 ? product.variants[0].imageUrl : '';
   const firstVariantColor = product.variants && product.variants.length > 0 ? product.variants[0].color : null;
   
@@ -21,7 +27,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
-  // Estados para el detector de Deslizamiento (Swipe)
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
@@ -80,9 +85,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     setIsGalleryOpen(true);
   };
 
-  // Funciones de control de Swipe
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEndX(null); // Reiniciamos el toque final
+    setTouchEndX(null);
     setTouchStartX(e.targetTouches[0].clientX);
   };
 
@@ -93,27 +97,22 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const handleTouchEnd = () => {
     if (touchStartX === null || touchEndX === null) return;
     const distance = touchStartX - touchEndX;
-    
-    // Si la distancia deslizada es mayor a 50px, lo detecta como Swipe
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
 
-    if (isLeftSwipe && allImages.length > 1) {
-      setGalleryIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
-    }
-    if (isRightSwipe && allImages.length > 1) {
-      setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
-    }
+    if (isLeftSwipe && allImages.length > 1) setGalleryIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+    if (isRightSwipe && allImages.length > 1) setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
     
-    setTouchStartX(null);
-    setTouchEndX(null);
+    setTouchStartX(null); setTouchEndX(null);
   };
 
   return (
     <>
-      <div className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col h-full group">
-        
-        <div onClick={openGallery} className="relative aspect-square bg-slate-50 overflow-hidden shrink-0 cursor-pointer">
+      <div 
+        className="rounded-[2rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full group"
+        style={{ backgroundColor: cardColor, color: textColor }} // APLICANDO COLOR DE TARJETA Y TEXTO
+      >
+        <div onClick={openGallery} className="relative aspect-square bg-black/5 overflow-hidden shrink-0 cursor-pointer">
           {activeImage ? (
             <>
               <img src={activeImage} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
@@ -124,54 +123,55 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               </div>
             </>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon className="w-10 h-10" /></div>
+            <div className="w-full h-full flex items-center justify-center opacity-30"><ImageIcon className="w-10 h-10" /></div>
           )}
           
           <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
             {isAgotado && <span className="bg-red-500 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md">Agotado</span>}
             {actualStock === 'pocas_unidades' && <span className="bg-orange-500 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md">Pocas Unid.</span>}
-            {product.isOffer && !isAgotado && <span className="bg-blue-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md flex items-center gap-1"><Tag className="w-3 h-3" /> Oferta</span>}
+            {product.isOffer && !isAgotado && <span className="text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md flex items-center gap-1" style={{ backgroundColor: accentColor }}><Tag className="w-3 h-3" /> Oferta</span>}
           </div>
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col flex-1">
           <div className="flex-1">
-            <span className="inline-block text-[10px] font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md uppercase tracking-widest mb-3">{product.category}</span>
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">{product.name}</h3>
-            <p className="text-xs sm:text-sm text-slate-500 mt-2 line-clamp-2 leading-relaxed">{product.description}</p>
+            <span className="inline-block text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest mb-3 opacity-80 border" style={{ borderColor: textColor }}>{product.category}</span>
+            <h3 className="text-base sm:text-lg font-bold leading-tight" style={{ color: textColor }}>{product.name}</h3>
+            <p className="text-xs sm:text-sm mt-2 line-clamp-2 leading-relaxed opacity-70">{product.description}</p>
           </div>
 
           {product.variants && product.variants.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-50">
+            <div className="mt-4 pt-4 border-t border-black/5">
               <div className="flex flex-wrap gap-2.5">
                 {product.variants.map((variant, idx) => (
                   <button
                     key={idx} title={variant.color}
                     onClick={() => handleVariantClick(variant.color, variant.imageUrl)}
-                    className={`w-6 h-6 rounded-full transition-all active:scale-95 ${activeColor === variant.color ? 'ring-2 ring-black ring-offset-2 scale-110 shadow-sm' : 'border border-slate-200 hover:scale-110 shadow-sm'}`}
-                    style={{ backgroundColor: variant.colorCode || '#e2e8f0' }}
+                    className={`w-6 h-6 rounded-full transition-all active:scale-95 ${activeColor === variant.color ? 'ring-2 ring-offset-2 scale-110 shadow-sm' : 'border border-black/10 hover:scale-110 shadow-sm'}`}
+                    style={{ backgroundColor: variant.colorCode || '#e2e8f0', ringColor: textColor }}
                   />
                 ))}
               </div>
             </div>
           )}
 
-          <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
+          <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
             <div className="flex flex-col">
               {product.isOffer && product.offerPrice ? (
                 <>
-                  <span className="text-xs text-slate-400 line-through">${product.price.toFixed(2)}</span>
-                  <span className="text-xl sm:text-2xl font-black text-red-600 tracking-tight">${product.offerPrice.toFixed(2)}</span>
+                  <span className="text-xs line-through opacity-50">${product.price.toFixed(2)}</span>
+                  <span className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: accentColor }}>${product.offerPrice.toFixed(2)}</span>
                 </>
               ) : (
-                <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">${product.price.toFixed(2)}</span>
+                <span className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: textColor }}>${product.price.toFixed(2)}</span>
               )}
             </div>
             
             <button 
               disabled={isAgotado} 
               onClick={(e) => { e.stopPropagation(); onAddToCart?.(product, activeColor); }}
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] bg-black text-white flex items-center justify-center hover:bg-slate-800 transition-all disabled:opacity-50 disabled:bg-slate-300 active:scale-95"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] text-white flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md"
+              style={{ backgroundColor: accentColor }} // APLICANDO COLOR DE ACENTO AL BOTÓN
             >
               <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -179,13 +179,13 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         </div>
       </div>
 
+      {/* GALERÍA (Mantenida igual) */}
       <AnimatePresence>
         {isGalleryOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md" onClick={() => setIsGalleryOpen(false)}>
             <button onClick={() => setIsGalleryOpen(false)} className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"><X className="w-6 h-6" /></button>
             {allImages.length > 1 && (
               <>
-                {/* Ocultamos las flechas en móviles muy pequeños para dar prioridad al Swipe, pero las dejamos en PC/Tablets */}
                 <button onClick={(e) => { e.stopPropagation(); setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1)); }} className="hidden sm:block absolute left-4 sm:left-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"><ChevronLeft className="w-8 h-8" /></button>
                 <button onClick={(e) => { e.stopPropagation(); setGalleryIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1)); }} className="hidden sm:block absolute right-4 sm:right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"><ChevronRight className="w-8 h-8" /></button>
               </>
@@ -202,12 +202,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <img 
-                src={allImages[galleryIndex]} 
-                alt="Galería" 
-                className="w-full h-full object-contain max-h-[80vh] rounded-xl shadow-2xl pointer-events-none select-none" 
-                draggable="false" 
-              />
+              <img src={allImages[galleryIndex]} alt="Galería" className="w-full h-full object-contain max-h-[80vh] rounded-xl shadow-2xl pointer-events-none select-none" draggable="false" />
               {allImages.length > 1 && (
                 <div className="flex gap-2 mt-6">
                   {allImages.map((_, idx) => <div key={idx} className={`w-2.5 h-2.5 rounded-full transition-all ${idx === galleryIndex ? 'bg-white scale-125' : 'bg-white/30'}`} />)}
