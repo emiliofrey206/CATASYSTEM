@@ -10,9 +10,8 @@ interface PublicCatalogProps {
   categories: Category[];
 }
 
-// Estructura de un ítem en el carrito
 interface CartItem {
-  id: string; // product.id + color
+  id: string;
   product: Product;
   color: string | null;
   quantity: number;
@@ -25,7 +24,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isSearchMobileOpen, setIsSearchMobileOpen] = useState(false);
   
-  // Estados del Carrito
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -65,7 +63,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
     setIsSearchMobileOpen(false);
   };
 
-  // --- LÓGICA DEL CARRITO ---
   const handleAddToCart = (product: Product, color: string | null) => {
     setCart(prevCart => {
       const cartItemId = `${product.id}-${color || 'default'}`;
@@ -75,7 +72,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
       }
       return [...prevCart, { id: cartItemId, product, color, quantity: 1 }];
     });
-    // Pequeño feedback visual (opcional)
     setIsCartOpen(true); 
     if (!isCartOpen) window.history.pushState({ view: 'cart' }, '');
   };
@@ -100,8 +96,8 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleCheckoutWhatsApp = () => {
-    // 🚨 PON AQUÍ TU NÚMERO DE TELÉFONO CON CÓDIGO DE PAÍS (Ej. 58 para Venezuela)
-    const WHATSAPP_NUMBER = "584161822333"; 
+    // RECUERDA PONER TU NÚMERO AQUÍ
+    const WHATSAPP_NUMBER = "584120000000"; 
     
     let text = `🛍️ *NUEVO PEDIDO - ${store.name}*\n\n`;
     text += `¡Hola! Me gustaría confirmar este pedido:\n\n`;
@@ -144,7 +140,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200 relative pb-24 lg:pb-0">
       
-      {/* HEADER MÓVIL */}
       <header className="lg:hidden flex items-center justify-between h-16 px-4 bg-white border-b border-slate-200 sticky top-0 z-40">
         <button onClick={() => { setIsMobileFiltersOpen(true); window.history.pushState({ view: 'menu' }, ''); }} className="p-2 -ml-2 text-slate-700 hover:bg-slate-100 rounded-full transition-colors">
           <Menu className="w-6 h-6" />
@@ -169,7 +164,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
-      {/* HEADER ESCRITORIO */}
       <header className="hidden lg:flex items-center justify-between h-24 px-8 max-w-7xl mx-auto mb-4 shrink-0">
         <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleSelectCategory('Inicio')}>
           {store.logoUrl ? <img src={store.logoUrl} alt={store.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm bg-white" /> : <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center shadow-sm"><ShoppingBag className="h-7 w-7 text-white" /></div>}
@@ -244,7 +238,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
-      {/* BOTÓN FLOTANTE DEL CARRITO */}
       <AnimatePresence>
         {cartItemCount > 0 && !isCartOpen && (
           <motion.button
@@ -261,7 +254,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
-      {/* MENÚ MÓVIL CATEGORÍAS */}
       <AnimatePresence>
         {isMobileFiltersOpen && (
           <>
@@ -277,7 +269,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
-      {/* DRAWER DEL CARRITO DE COMPRAS */}
       <AnimatePresence>
         {isCartOpen && (
           <>
@@ -301,10 +292,23 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                 ) : (
                   cart.map(item => {
                     const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
+                    
+                    // LÓGICA INTELIGENTE DE IMAGEN PARA EL CARRITO
+                    let cartItemImage = item.product.imageUrl;
+                    if (item.color && item.product.variants) {
+                      const variantInfo = item.product.variants.find(v => v.color === item.color);
+                      if (variantInfo && variantInfo.imageUrl) {
+                        cartItemImage = variantInfo.imageUrl; // Asigna la foto del color exacto
+                      }
+                    }
+                    if (!cartItemImage && item.product.variants && item.product.variants.length > 0) {
+                      cartItemImage = item.product.variants[0].imageUrl;
+                    }
+
                     return (
                       <div key={item.id} className="bg-white p-3 rounded-2xl border border-slate-200 flex gap-4 items-center shadow-sm relative">
                         <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden shrink-0">
-                          {item.product.imageUrl ? <img src={item.product.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 m-5 text-slate-300" />}
+                          {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 m-5 text-slate-300" />}
                         </div>
                         <div className="flex-1 min-w-0 pr-4">
                           <h4 className="text-sm font-bold text-slate-900 truncate">{item.product.name}</h4>
