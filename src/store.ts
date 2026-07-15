@@ -14,7 +14,8 @@ class CatalogStore {
   private listeners = new Set<() => void>();
 
   constructor() {
-    this.isAuthenticated = sessionStorage.getItem('catalog_auth') === 'true';
+    // CAMBIO: Ahora usa localStorage para recordar el dispositivo de forma permanente
+    this.isAuthenticated = localStorage.getItem('catalog_auth') === 'true';
     this.loadFromSupabase();
     this.setupRealtime(); // Iniciamos el radar de tiempo real
   }
@@ -79,7 +80,8 @@ class CatalogStore {
   login = (user: string, pass: string) => {
     if (user === 'admin' && pass === 'admin') {
       this.isAuthenticated = true;
-      sessionStorage.setItem('catalog_auth', 'true');
+      // CAMBIO: Guardamos la sesión en el dispositivo (localStorage)
+      localStorage.setItem('catalog_auth', 'true');
       this.notify();
       return true;
     }
@@ -88,7 +90,8 @@ class CatalogStore {
 
   logout = () => {
     this.isAuthenticated = false;
-    sessionStorage.removeItem('catalog_auth');
+    // CAMBIO: Borramos la sesión del dispositivo solo si el usuario presiona "Salir"
+    localStorage.removeItem('catalog_auth');
     this.notify();
   }
 
