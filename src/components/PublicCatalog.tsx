@@ -18,12 +18,15 @@ interface CartItem {
 }
 
 export function PublicCatalog({ store, products, categories }: PublicCatalogProps) {
-  // EXTRAEMOS LOS COLORES (Con fallbacks si están vacíos)
   const headerColor = store.headerColor || '#ffffff';
   const bgColor = store.bgColor || '#f8fafc';
   const cardColor = store.cardColor || '#ffffff';
   const accentColor = store.accentColor || '#16a34a';
   const textColor = store.textColor || '#0f172a';
+  
+  // Colores del Botón de Pagar
+  const checkoutBtnColor = store.checkoutBtnColor || '#16a34a';
+  const checkoutBtnTextColor = store.checkoutBtnTextColor || '#ffffff';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Inicio');
@@ -76,12 +79,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   };
 
   const removeCartItem = (id: string) => setCart(prev => prev.filter(item => item.id !== id));
-
-  const handleClearCart = () => {
-    if (window.confirm('¿Estás seguro de que deseas vaciar por completo tu lista de compras?')) {
-      setCart([]); setIsCartOpen(false);
-    }
-  };
+  const handleClearCart = () => { if (window.confirm('¿Estás seguro de que deseas vaciar por completo tu lista de compras?')) { setCart([]); setIsCartOpen(false); } };
 
   const cartTotal = cart.reduce((acc, item) => {
     const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
@@ -128,9 +126,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
       
       {/* HEADER MÓVIL */}
       <header className="lg:hidden flex items-center justify-between h-16 px-4 border-b border-black/5 sticky top-0 z-40 shadow-sm transition-colors duration-500" style={{ backgroundColor: headerColor }}>
-        <button onClick={() => { setIsMobileFiltersOpen(true); window.history.pushState({ view: 'menu' }, ''); }} className="p-2 -ml-2 rounded-full transition-colors opacity-80" style={{ color: textColor }}>
-          <Menu className="w-6 h-6" />
-        </button>
+        <button onClick={() => { setIsMobileFiltersOpen(true); window.history.pushState({ view: 'menu' }, ''); }} className="p-2 -ml-2 rounded-full transition-colors opacity-80" style={{ color: textColor }}><Menu className="w-6 h-6" /></button>
         <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2 cursor-pointer" onClick={() => handleSelectCategory('Inicio')}>
           {store.logoUrl ? <img src={store.logoUrl} alt={store.name} className="w-8 h-8 rounded-lg object-cover shadow-sm" /> : <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm" style={{ backgroundColor: accentColor }}><ShoppingBag className="h-4 w-4 text-white" /></div>}
           <h1 className="text-base font-black tracking-tight uppercase truncate max-w-[120px] sm:max-w-[200px]" style={{ color: textColor }}>{store.name}</h1>
@@ -170,9 +166,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         <div className="flex flex-col lg:flex-row lg:gap-8">
           
           <aside className="lg:w-72 flex-shrink-0 hidden lg:block">
-            <div className="rounded-3xl p-5 flex flex-col gap-6 sticky top-6 shadow-sm border border-black/5 transition-colors duration-500" style={{ backgroundColor: cardColor }}>
-              <CategoryNavigation />
-            </div>
+            <div className="rounded-3xl p-5 flex flex-col gap-6 sticky top-6 shadow-sm border border-black/5 transition-colors duration-500" style={{ backgroundColor: cardColor }}><CategoryNavigation /></div>
           </aside>
 
           <section className="flex-1">
@@ -188,15 +182,11 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                   {categories.map(cat => (
                     <button key={cat.id} onClick={() => handleSelectCategory(cat.name)} className="relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden group shadow-sm border border-black/5 block w-full transition-transform active:scale-95" style={{ backgroundColor: cardColor }}>
                       {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><ImageIcon className="w-8 h-8" style={{ color: textColor }} /></div>}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3 sm:p-5 text-left">
-                        <h3 className="text-white font-bold text-sm sm:text-lg leading-tight drop-shadow-md">{cat.name}</h3>
-                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3 sm:p-5 text-left"><h3 className="text-white font-bold text-sm sm:text-lg leading-tight drop-shadow-md">{cat.name}</h3></div>
                     </button>
                   ))}
                 </div>
-                <button onClick={() => handleSelectCategory('Todos')} className="w-full mt-2 px-5 py-4 rounded-2xl text-sm sm:text-base font-bold transition-colors shadow-sm" style={{ backgroundColor: cardColor, color: textColor }}>
-                  Mostrar todos los productos
-                </button>
+                <button onClick={() => handleSelectCategory('Todos')} className="w-full mt-2 px-5 py-4 rounded-2xl text-sm sm:text-base font-bold transition-colors shadow-sm" style={{ backgroundColor: cardColor, color: textColor }}>Mostrar todos los productos</button>
               </motion.div>
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 sm:space-y-6">
@@ -211,7 +201,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map((product) => (
                         <motion.div key={product.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}>
-                          {/* PASAMOS LA TIENDA A LA TARJETA */}
                           <ProductCard product={product} store={store} onAddToCart={handleAddToCart} />
                         </motion.div>
                       ))}
@@ -221,7 +210,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                   <div className="flex flex-col items-center justify-center py-20 text-center rounded-[2rem] shadow-sm border border-black/5" style={{ backgroundColor: cardColor }}>
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl mb-4 opacity-20" style={{ backgroundColor: textColor }}><Search className="h-8 w-8" style={{ color: bgColor }} /></div>
                     <h3 className="text-lg font-bold mb-1" style={{ color: textColor }}>No se encontraron productos</h3>
-                    <button onClick={() => handleSelectCategory('Inicio')} className="mt-6 text-white px-6 py-3 rounded-2xl text-sm font-semibold transition-colors shadow-md" style={{ backgroundColor: accentColor }}>Volver al inicio</button>
+                    <button onClick={() => handleSelectCategory('Inicio')} className="mt-6 text-white px-6 py-3 rounded-2xl text-sm font-semibold transition-colors shadow-md" style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}>Volver al inicio</button>
                   </div>
                 )}
               </motion.div>
@@ -230,14 +219,13 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
-      {/* BOTÓN FLOTANTE DEL CARRITO (Verde o Color Acento) */}
       <AnimatePresence>
         {cartItemCount > 0 && !isCartOpen && (
           <motion.button
             initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
             onClick={() => { setIsCartOpen(true); window.history.pushState({ view: 'cart' }, ''); }}
-            className="fixed bottom-6 right-6 z-40 flex items-center justify-center gap-3 rounded-full text-white pl-4 pr-5 py-3.5 shadow-2xl transition-transform active:scale-95 font-bold"
-            style={{ backgroundColor: accentColor }}
+            className="fixed bottom-6 right-6 z-40 flex items-center justify-center gap-3 rounded-full pl-4 pr-5 py-3.5 shadow-2xl transition-transform active:scale-95 font-bold"
+            style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}
           >
             <div className="relative">
               <ShoppingCart className="w-5 h-5" />
@@ -248,7 +236,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
-      {/* MENÚ MÓVIL CATEGORÍAS */}
       <AnimatePresence>
         {isMobileFiltersOpen && (
           <>
@@ -264,42 +251,33 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
-      {/* DRAWER DEL CARRITO DE COMPRAS */}
       <AnimatePresence>
         {isCartOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={() => setIsCartOpen(false)} />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', bounce: 0, duration: 0.4 }} className="fixed inset-y-0 right-0 w-full max-w-md z-50 flex flex-col shadow-2xl" style={{ backgroundColor: cardColor }}>
               
-              <div className="flex justify-between items-center p-6 border-b border-black/5 shrink-0" style={{ backgroundColor: bgColor }}>
+              {/* CABECERA DEL CARRITO: ¡AHORA USA headerColor EN LUGAR DE bgColor! */}
+              <div className="flex justify-between items-center p-6 border-b border-black/5 shrink-0" style={{ backgroundColor: headerColor }}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm" style={{ backgroundColor: accentColor }}><ShoppingCart className="w-5 h-5" /></div>
                   <h3 className="text-xl font-black" style={{ color: textColor }}>Tu Pedido</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  {cart.length > 0 && (
-                    <button onClick={handleClearCart} className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 bg-red-50 px-2.5 py-1.5 rounded-lg mr-1 shadow-sm border border-red-100"><Trash2 className="w-3.5 h-3.5" /> Limpiar</button>
-                  )}
+                  {cart.length > 0 && <button onClick={handleClearCart} className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 bg-red-50 px-2.5 py-1.5 rounded-lg mr-1 shadow-sm border border-red-100"><Trash2 className="w-3.5 h-3.5" /> Limpiar</button>}
                   <button onClick={() => setIsCartOpen(false)} className="p-2 rounded-full border border-black/10 shadow-sm opacity-70" style={{ backgroundColor: cardColor, color: textColor }}><X className="w-5 h-5" /></button>
                 </div>
               </div>
               
               <div className="overflow-y-auto p-4 sm:p-6 flex-1 space-y-4">
                 {cart.length === 0 ? (
-                  <div className="text-center py-20 opacity-50" style={{ color: textColor }}>
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-4" />
-                    <p>Tu carrito está vacío</p>
-                  </div>
+                  <div className="text-center py-20 opacity-50" style={{ color: textColor }}><ShoppingCart className="w-12 h-12 mx-auto mb-4" /><p>Tu carrito está vacío</p></div>
                 ) : (
                   cart.map(item => {
                     const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
                     let cartItemImage = item.product.imageUrl;
-                    if (item.color && item.product.variants) {
-                      const variantInfo = item.product.variants.find(v => v.color === item.color);
-                      if (variantInfo && variantInfo.imageUrl) cartItemImage = variantInfo.imageUrl;
-                    }
+                    if (item.color && item.product.variants) { const variantInfo = item.product.variants.find(v => v.color === item.color); if (variantInfo && variantInfo.imageUrl) cartItemImage = variantInfo.imageUrl; }
                     if (!cartItemImage && item.product.variants && item.product.variants.length > 0) cartItemImage = item.product.variants[0].imageUrl;
-
                     return (
                       <div key={item.id} className="p-3 rounded-2xl border border-black/5 flex gap-4 items-center shadow-sm relative" style={{ backgroundColor: bgColor }}>
                         <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
@@ -330,7 +308,8 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     <span className="font-semibold opacity-70" style={{ color: textColor }}>Total a pagar</span>
                     <span className="text-2xl font-black" style={{ color: textColor }}>${cartTotal.toFixed(2)}</span>
                   </div>
-                  <button onClick={handleCheckoutWhatsApp} className="w-full text-white px-5 py-4 rounded-2xl text-base font-black flex items-center justify-center gap-3 active:scale-95 shadow-lg" style={{ backgroundColor: accentColor }}>
+                  {/* BOTÓN DE CHECKOUT PERSONALIZADO */}
+                  <button onClick={handleCheckoutWhatsApp} className="w-full px-5 py-4 rounded-2xl text-base font-black flex items-center justify-center gap-3 active:scale-95 shadow-lg" style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}>
                     <MessageCircle className="w-6 h-6" /> Enviar Pedido
                   </button>
                 </div>
