@@ -36,22 +36,25 @@ class CatalogStore {
 
   async loadFromSupabase() {
     try {
-      const { data: storesData, error: storesError } = await supabase.from('stores').select('*').order('created_at', { ascending: true });
-      if (storesError) throw storesError;
-      
-      const { data: productsData, error: productsError } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-      if (productsError) throw productsError;
+      // Optimizamos: Lanzamos todas las peticiones simultáneamente en paralelo
+      const [storesResult, productsResult, categoriesResult, colorsResult] = await Promise.all([
+        supabase.from('stores').select('*').order('created_at', { ascending: true }),
+        supabase.from('products').select('*').order('created_at', { ascending: false }),
+        supabase.from('categories').select('*').order('created_at', { ascending: true }),
+        supabase.from('colors').select('*').order('name', { ascending: true })
+      ]);
 
-      const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
-      if (categoriesError) throw categoriesError;
+      // Evaluamos si hubo errores en alguna de las peticiones
+      if (storesResult.error) throw storesResult.error;
+      if (productsResult.error) throw productsResult.error;
+      if (categoriesResult.error) throw categoriesResult.error;
+      if (colorsResult.error) throw colorsResult.error;
 
-      const { data: colorsData, error: colorsError } = await supabase.from('colors').select('*').order('name', { ascending: true });
-      if (colorsError) throw colorsError;
-
-      this.stores = storesData || [];
-      this.products = productsData || [];
-      this.categories = categoriesData || [];
-      this.colors = colorsData || [];
+      // Asignamos los datos una sola vez
+      this.stores = storesResult.data || [];
+      this.products = productsResult.data || [];
+      this.categories = categoriesResult.data || [];
+      this.colors = colorsResult.data || [];
 
       if (this.stores.length > 0 && !this.activeStoreId) {
         this.activeStoreId = this.stores[0].id;
@@ -60,7 +63,7 @@ class CatalogStore {
       console.error("Error cargando datos de Supabase:", error);
     } finally {
       this.isLoaded = true;
-      this.notify();
+      this.notify(); // Notificamos una sola vez al terminar todo
     }
   }
 
