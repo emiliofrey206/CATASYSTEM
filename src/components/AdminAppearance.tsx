@@ -10,7 +10,6 @@ interface AdminAppearanceProps {
 export function AdminAppearance({ activeStore, updateStore }: AdminAppearanceProps) {
   const [isSaving, setIsSaving] = useState(false);
   
-  // Colores por defecto
   const defaultColors = {
     headerColor: '#ffffff', bgColor: '#f8fafc', cardColor: '#ffffff', accentColor: '#16a34a', textColor: '#0f172a',
     checkoutBtnColor: '#16a34a', checkoutBtnTextColor: '#ffffff',
@@ -18,6 +17,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
     badgeFewColor: '#f97316', badgeFewTextColor: '#ffffff',
     badgeOutColor: '#ef4444', badgeOutTextColor: '#ffffff',
     badgeOfferColor: '#2563eb', badgeOfferTextColor: '#ffffff',
+    cartItemBgColor: '#ffffff', // NUEVO DEFAULT
   };
 
   const [colors, setColors] = useState({
@@ -36,6 +36,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
     badgeOutTextColor: activeStore?.badgeOutTextColor || defaultColors.badgeOutTextColor,
     badgeOfferColor: activeStore?.badgeOfferColor || defaultColors.badgeOfferColor,
     badgeOfferTextColor: activeStore?.badgeOfferTextColor || defaultColors.badgeOfferTextColor,
+    cartItemBgColor: activeStore?.cartItemBgColor || defaultColors.cartItemBgColor, // NUEVO ESTADO
   });
 
   useEffect(() => {
@@ -49,12 +50,12 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
         badgeFewTextColor: activeStore.badgeFewTextColor || defaultColors.badgeFewTextColor, badgeOutColor: activeStore.badgeOutColor || defaultColors.badgeOutColor,
         badgeOutTextColor: activeStore.badgeOutTextColor || defaultColors.badgeOutTextColor, badgeOfferColor: activeStore.badgeOfferColor || defaultColors.badgeOfferColor,
         badgeOfferTextColor: activeStore.badgeOfferTextColor || defaultColors.badgeOfferTextColor,
+        cartItemBgColor: activeStore.cartItemBgColor || defaultColors.cartItemBgColor, // NUEVO EFFECT
       });
     }
   }, [activeStore]);
 
   const handleChange = (field: string, value: string) => setColors(prev => ({ ...prev, [field]: value }));
-
   const resetToDefault = () => { if(confirm('¿Restaurar colores originales?')) setColors(defaultColors); };
 
   const handleSave = async () => {
@@ -87,24 +88,24 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
         
         <div className="space-y-8 h-[600px] overflow-y-auto pr-2">
           
-          {/* SECCIÓN 1: GENERAL */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
             <h3 className="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">Colores Generales</h3>
             <ColorPicker label="Fondo del Catálogo" value={colors.bgColor} onChange={(v) => handleChange('bgColor', v)} />
             <ColorPicker label="Cabecera (Banner y Carrito)" value={colors.headerColor} onChange={(v) => handleChange('headerColor', v)} />
             <ColorPicker label="Superficies (Tarjetas)" value={colors.cardColor} onChange={(v) => handleChange('cardColor', v)} />
+            {/* NUEVO COLOR PICKER AQUÍ */}
+            <ColorPicker label="Fondo Producto en Carrito" value={colors.cartItemBgColor} onChange={(v) => handleChange('cartItemBgColor', v)} />
+            
             <ColorPicker label="Botones Pequeños (+ / - / Lupa)" value={colors.accentColor} onChange={(v) => handleChange('accentColor', v)} />
             <ColorPicker label="Color del Texto Principal" value={colors.textColor} onChange={(v) => handleChange('textColor', v)} />
           </div>
 
-          {/* SECCIÓN 2: BOTÓN CHECKOUT */}
           <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
             <h3 className="font-bold text-blue-900 border-b border-blue-200 pb-2 mb-3">Botón Final (Enviar Pedido)</h3>
             <ColorPicker label="Fondo del Botón" value={colors.checkoutBtnColor} onChange={(v) => handleChange('checkoutBtnColor', v)} />
             <ColorPicker label="Texto del Botón" value={colors.checkoutBtnTextColor} onChange={(v) => handleChange('checkoutBtnTextColor', v)} />
           </div>
 
-          {/* SECCIÓN 3: ETIQUETAS DE INVENTARIO */}
           <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 space-y-3">
             <h3 className="font-bold text-orange-900 border-b border-orange-200 pb-2 mb-3">Etiquetas de Estado (Badges)</h3>
             
@@ -140,8 +141,6 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
 
             <div className="p-4 flex-1 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                
-                {/* Simulador Tarjeta Oferta */}
                 <div className="rounded-2xl p-2 shadow-sm relative" style={{ backgroundColor: colors.cardColor }}>
                   <div className="aspect-square bg-black/5 rounded-xl mb-2 relative">
                     <span className="absolute top-1 right-1 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm" style={{ backgroundColor: colors.badgeOfferColor, color: colors.badgeOfferTextColor }}>OFERTA</span>
@@ -149,8 +148,6 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
                   <div className="w-2/3 h-2 rounded mb-3 opacity-60" style={{ backgroundColor: colors.textColor }} />
                   <div className="w-6 h-6 rounded-lg flex items-center justify-center float-right shadow-sm" style={{ backgroundColor: colors.accentColor }}><ShoppingBag className="w-3 h-3 text-white" /></div>
                 </div>
-
-                {/* Simulador Tarjeta Pocas Unidades */}
                 <div className="rounded-2xl p-2 shadow-sm relative" style={{ backgroundColor: colors.cardColor }}>
                   <div className="aspect-square bg-black/5 rounded-xl mb-2 relative">
                     <span className="absolute top-1 right-1 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm" style={{ backgroundColor: colors.badgeFewColor, color: colors.badgeFewTextColor }}>POCAS UNID</span>
@@ -158,11 +155,9 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
                   <div className="w-2/3 h-2 rounded mb-3 opacity-60" style={{ backgroundColor: colors.textColor }} />
                   <div className="w-6 h-6 rounded-lg flex items-center justify-center float-right shadow-sm" style={{ backgroundColor: colors.accentColor }}><ShoppingBag className="w-3 h-3 text-white" /></div>
                 </div>
-
               </div>
             </div>
 
-            {/* Simulador Botón Checkout */}
             <div className="p-4 bg-white/10 shrink-0">
               <div className="w-full py-3 rounded-xl text-xs font-bold text-center shadow-lg" style={{ backgroundColor: colors.checkoutBtnColor, color: colors.checkoutBtnTextColor }}>Enviar Pedido</div>
             </div>
