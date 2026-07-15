@@ -20,6 +20,7 @@ export interface Store {
   badgeOutTextColor?: string;
   badgeOfferColor?: string;
   badgeOfferTextColor?: string;
+  cartItemBgColor?: string;
 }
 
 export interface Color {
