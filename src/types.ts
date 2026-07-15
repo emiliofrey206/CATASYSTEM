@@ -2,13 +2,24 @@ export interface Store {
   id: string;
   name: string;
   slug: string;
-  description?: string;
-  logoUrl?: string; // NUEVO: Soporte para el logo de la tienda
+  logoUrl?: string;
+  // Colores Generales
   headerColor?: string;
   bgColor?: string;
   cardColor?: string;
   accentColor?: string;
   textColor?: string;
+  // NUEVO: Colores Específicos (Botones y Etiquetas)
+  checkoutBtnColor?: string;
+  checkoutBtnTextColor?: string;
+  badgeAvailableColor?: string;
+  badgeAvailableTextColor?: string;
+  badgeFewColor?: string;
+  badgeFewTextColor?: string;
+  badgeOutColor?: string;
+  badgeOutTextColor?: string;
+  badgeOfferColor?: string;
+  badgeOfferTextColor?: string;
 }
 
 export interface Color {
