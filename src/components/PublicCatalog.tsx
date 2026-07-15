@@ -23,6 +23,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const cardColor = store.cardColor || '#ffffff';
   const accentColor = store.accentColor || '#16a34a';
   const textColor = store.textColor || '#0f172a';
+  const cartItemBgColor = store.cartItemBgColor || '#ffffff';
   
   // Colores del Botón de Pagar
   const checkoutBtnColor = store.checkoutBtnColor || '#16a34a';
@@ -279,7 +280,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     if (item.color && item.product.variants) { const variantInfo = item.product.variants.find(v => v.color === item.color); if (variantInfo && variantInfo.imageUrl) cartItemImage = variantInfo.imageUrl; }
                     if (!cartItemImage && item.product.variants && item.product.variants.length > 0) cartItemImage = item.product.variants[0].imageUrl;
                     return (
-                      <div key={item.id} className="p-3 rounded-2xl border border-black/5 flex gap-4 items-center shadow-sm relative" style={{ backgroundColor: bgColor }}>
+                      <div key={item.id} className="p-3 rounded-2xl border border-black/5 flex gap-4 items-center shadow-sm relative" style={{ backgroundColor: cartItemBgColor }}>
                         <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
                           {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 m-5 opacity-30" style={{ color: textColor }} />}
                         </div>
