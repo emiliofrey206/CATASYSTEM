@@ -89,7 +89,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleCheckoutWhatsApp = () => {
-    const WHATSAPP_NUMBER = "584120000000"; // Reemplazar con tu número
+    const WHATSAPP_NUMBER = "584120000000"; 
     let text = `🛍️ *NUEVO PEDIDO - ${store.name}*\n\n¡Hola! Me gustaría confirmar este pedido:\n\n`;
     cart.forEach(item => {
       const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
@@ -173,13 +173,15 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             {isHomeView ? (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
                 
-                {/* TÍTULO CON DECORACIÓN (VISTA INICIO) */}
-                <div className="hidden lg:flex items-center justify-between px-2 mb-2">
-                  <div className="relative inline-block">
-                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight relative z-10" style={{ color: textColor }}>¿Qué estás buscando?</h2>
-                    {/* Línea decorativa del color del banner */}
-                    <div className="absolute -bottom-1 left-0 w-16 h-2 rounded-full opacity-80" style={{ backgroundColor: headerColor }}></div>
-                    <p className="text-sm mt-3 opacity-70 font-medium" style={{ color: textColor }}>Explora nuestras categorías</p>
+                {/* TÍTULO CON BARRA DE FONDO PARA EL SUBTÍTULO (VISTA INICIO) */}
+                <div className="hidden lg:flex items-center justify-between px-2 mb-4">
+                  <div className="flex flex-col items-start gap-2.5">
+                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>¿Qué estás buscando?</h2>
+                    
+                    {/* Esta es la barra que envuelve al texto y usa el color del Banner (headerColor) */}
+                    <div className="px-4 py-1.5 rounded-xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
+                      <p className="text-sm font-bold" style={{ color: textColor }}>Explora nuestras categorías</p>
+                    </div>
                   </div>
                 </div>
 
@@ -196,15 +198,19 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 sm:space-y-6">
                 
-                {/* TÍTULO CON DECORACIÓN (VISTA CATEGORÍAS/TODOS) */}
-                <div className="flex items-center justify-between px-1 sm:px-2 mb-4">
-                  <div className="relative inline-block">
-                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight relative z-10" style={{ color: textColor }}>
+                {/* TÍTULO CON BARRA DE FONDO PARA EL SUBTÍTULO (VISTA CATEGORÍAS/TODOS) */}
+                <div className="flex items-center justify-between px-1 sm:px-2 mb-5">
+                  <div className="flex flex-col items-start gap-2.5">
+                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>
                       {searchQuery ? 'Resultados' : (selectedCategory === 'Todos' ? 'Todos los productos' : selectedCategory)}
                     </h2>
-                    {/* Línea decorativa del color del banner */}
-                    <div className="absolute -bottom-1 left-0 w-16 h-2 rounded-full opacity-80" style={{ backgroundColor: headerColor }}></div>
-                    {searchQuery && <p className="text-sm mt-3 opacity-70 font-medium" style={{ color: textColor }}>Buscando: "{searchQuery}"</p>}
+                    
+                    {/* Barra de fondo usando el color del Header */}
+                    <div className="px-4 py-1.5 rounded-xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
+                      <p className="text-sm font-bold" style={{ color: textColor }}>
+                        {searchQuery ? `Buscando: "${searchQuery}"` : 'Explorando catálogo'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
