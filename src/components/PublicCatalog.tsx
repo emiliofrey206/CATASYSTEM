@@ -173,15 +173,20 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             {isHomeView ? (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
                 
-                {/* TÍTULO CON BARRA DE FONDO PARA EL SUBTÍTULO (VISTA INICIO) */}
+                {/* --- TÍTULO PRINCIPAL MODIFICADO --- */}
                 <div className="hidden lg:flex items-center justify-between px-2 mb-4">
-                  <div className="flex flex-col items-start gap-2.5">
-                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>¿Qué estás buscando?</h2>
+                  <div className="flex flex-col items-start gap-3">
                     
-                    {/* Esta es la barra que envuelve al texto y usa el color del Banner (headerColor) */}
+                    {/* Cápsula para el Título Grande */}
+                    <div className="px-5 py-2.5 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
+                      <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>¿Qué estás buscando?</h2>
+                    </div>
+                    
+                    {/* Cápsula para el Subtítulo */}
                     <div className="px-4 py-1.5 rounded-xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
                       <p className="text-sm font-bold" style={{ color: textColor }}>Explora nuestras categorías</p>
                     </div>
+
                   </div>
                 </div>
 
@@ -198,19 +203,24 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 sm:space-y-6">
                 
-                {/* TÍTULO CON BARRA DE FONDO PARA EL SUBTÍTULO (VISTA CATEGORÍAS/TODOS) */}
+                {/* --- TÍTULO DE CATEGORÍAS MODIFICADO --- */}
                 <div className="flex items-center justify-between px-1 sm:px-2 mb-5">
-                  <div className="flex flex-col items-start gap-2.5">
-                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>
-                      {searchQuery ? 'Resultados' : (selectedCategory === 'Todos' ? 'Todos los productos' : selectedCategory)}
-                    </h2>
+                  <div className="flex flex-col items-start gap-3">
                     
-                    {/* Barra de fondo usando el color del Header */}
+                    {/* Cápsula para el Título Grande */}
+                    <div className="px-5 py-2.5 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
+                      <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>
+                        {searchQuery ? 'Resultados' : (selectedCategory === 'Todos' ? 'Todos los productos' : selectedCategory)}
+                      </h2>
+                    </div>
+                    
+                    {/* Cápsula para el Subtítulo */}
                     <div className="px-4 py-1.5 rounded-xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
                       <p className="text-sm font-bold" style={{ color: textColor }}>
                         {searchQuery ? `Buscando: "${searchQuery}"` : 'Explorando catálogo'}
                       </p>
                     </div>
+
                   </div>
                 </div>
 
