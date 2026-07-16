@@ -23,11 +23,10 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const cardColor = store.cardColor || '#ffffff';
   const accentColor = store.accentColor || '#16a34a';
   const textColor = store.textColor || '#0f172a';
-  const cartItemBgColor = store.cartItemBgColor || '#ffffff';
   
-  // Colores del Botón de Pagar
   const checkoutBtnColor = store.checkoutBtnColor || '#16a34a';
   const checkoutBtnTextColor = store.checkoutBtnTextColor || '#ffffff';
+  const cartItemBgColor = store.cartItemBgColor || '#ffffff';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Inicio');
@@ -90,7 +89,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleCheckoutWhatsApp = () => {
-    const WHATSAPP_NUMBER = "584120000000"; 
+    const WHATSAPP_NUMBER = "584120000000"; // Reemplazar con tu número
     let text = `🛍️ *NUEVO PEDIDO - ${store.name}*\n\n¡Hola! Me gustaría confirmar este pedido:\n\n`;
     cart.forEach(item => {
       const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
@@ -173,12 +172,17 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
           <section className="flex-1">
             {isHomeView ? (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
-                <div className="hidden lg:flex items-center justify-between px-2">
-                  <div>
-                    <h2 className="text-2xl font-black" style={{ color: textColor }}>¿Qué estás buscando?</h2>
-                    <p className="text-sm mt-1 opacity-70" style={{ color: textColor }}>Explora nuestras categorías</p>
+                
+                {/* TÍTULO CON DECORACIÓN (VISTA INICIO) */}
+                <div className="hidden lg:flex items-center justify-between px-2 mb-2">
+                  <div className="relative inline-block">
+                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight relative z-10" style={{ color: textColor }}>¿Qué estás buscando?</h2>
+                    {/* Línea decorativa del color del banner */}
+                    <div className="absolute -bottom-1 left-0 w-16 h-2 rounded-full opacity-80" style={{ backgroundColor: headerColor }}></div>
+                    <p className="text-sm mt-3 opacity-70 font-medium" style={{ color: textColor }}>Explora nuestras categorías</p>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-5">
                   {categories.map(cat => (
                     <button key={cat.id} onClick={() => handleSelectCategory(cat.name)} className="relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden group shadow-sm border border-black/5 block w-full transition-transform active:scale-95" style={{ backgroundColor: cardColor }}>
@@ -191,12 +195,19 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
               </motion.div>
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between px-1 sm:px-2">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold" style={{ color: textColor }}>{searchQuery ? 'Resultados' : (selectedCategory === 'Todos' ? 'Todos' : selectedCategory)}</h2>
-                    {searchQuery && <p className="text-sm mt-1 opacity-70" style={{ color: textColor }}>Buscando: "{searchQuery}"</p>}
+                
+                {/* TÍTULO CON DECORACIÓN (VISTA CATEGORÍAS/TODOS) */}
+                <div className="flex items-center justify-between px-1 sm:px-2 mb-4">
+                  <div className="relative inline-block">
+                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight relative z-10" style={{ color: textColor }}>
+                      {searchQuery ? 'Resultados' : (selectedCategory === 'Todos' ? 'Todos los productos' : selectedCategory)}
+                    </h2>
+                    {/* Línea decorativa del color del banner */}
+                    <div className="absolute -bottom-1 left-0 w-16 h-2 rounded-full opacity-80" style={{ backgroundColor: headerColor }}></div>
+                    {searchQuery && <p className="text-sm mt-3 opacity-70 font-medium" style={{ color: textColor }}>Buscando: "{searchQuery}"</p>}
                   </div>
                 </div>
+
                 {filteredProducts.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                     <AnimatePresence mode="popLayout">
@@ -220,6 +231,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
+      {/* BOTÓN FLOTANTE DEL CARRITO */}
       <AnimatePresence>
         {cartItemCount > 0 && !isCartOpen && (
           <motion.button
@@ -258,7 +270,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={() => setIsCartOpen(false)} />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', bounce: 0, duration: 0.4 }} className="fixed inset-y-0 right-0 w-full max-w-md z-50 flex flex-col shadow-2xl" style={{ backgroundColor: cardColor }}>
               
-              {/* CABECERA DEL CARRITO: ¡AHORA USA headerColor EN LUGAR DE bgColor! */}
               <div className="flex justify-between items-center p-6 border-b border-black/5 shrink-0" style={{ backgroundColor: headerColor }}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm" style={{ backgroundColor: accentColor }}><ShoppingCart className="w-5 h-5" /></div>
@@ -309,7 +320,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     <span className="font-semibold opacity-70" style={{ color: textColor }}>Total a pagar</span>
                     <span className="text-2xl font-black" style={{ color: textColor }}>${cartTotal.toFixed(2)}</span>
                   </div>
-                  {/* BOTÓN DE CHECKOUT PERSONALIZADO */}
                   <button onClick={handleCheckoutWhatsApp} className="w-full px-5 py-4 rounded-2xl text-base font-black flex items-center justify-center gap-3 active:scale-95 shadow-lg" style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}>
                     <MessageCircle className="w-6 h-6" /> Enviar Pedido
                   </button>
