@@ -271,7 +271,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
-      {/* --- AQUÍ ESTÁ TU NUEVA FIRMA --- */}
       <footer className="w-full text-center py-8 mt-auto px-4 opacity-50 hover:opacity-100 transition-opacity duration-300">
         <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: textColor }}>
           CataSystem Desarrollado por ING. EMILIO FREY, 2026
@@ -354,22 +353,25 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     if (item.color && item.product.variants) { const variantInfo = item.product.variants.find(v => v.color === item.color); if (variantInfo && variantInfo.imageUrl) cartItemImage = variantInfo.imageUrl; }
                     if (!cartItemImage && item.product.variants && item.product.variants.length > 0) cartItemImage = item.product.variants[0].imageUrl;
                     return (
-                      <div key={item.id} className="p-3 rounded-2xl border border-black/5 flex gap-4 items-center shadow-sm relative" style={{ backgroundColor: cartItemBgColor }}>
-                        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
-                          {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 m-5 opacity-30" style={{ color: textColor }} />}
+                      <div key={item.id} className="p-2.5 rounded-2xl border border-black/5 flex gap-3 items-center shadow-sm relative" style={{ backgroundColor: cartItemBgColor }}>
+                        {/* IMAGEN MÁS COMPACTA */}
+                        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
+                          {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 m-4 opacity-30" style={{ color: textColor }} />}
                         </div>
                         
-                        <div className="flex-1 min-w-0 pr-6">
-                          <h4 className="text-sm font-bold leading-tight" style={{ color: textColor }}>{item.product.name}</h4>
-                          {item.color && <p className="text-xs mt-0.5 opacity-70" style={{ color: textColor }}>Color: {item.color}</p>}
-                          <p className="text-sm font-black mt-1" style={{ color: textColor }}>${price.toFixed(2)}</p>
+                        {/* TEXTOS COMPACTOS CON TRUNCATE */}
+                        <div className="flex-1 min-w-0 pr-7">
+                          <h4 className="text-sm font-bold truncate" style={{ color: textColor }}>{item.product.name}</h4>
+                          {item.color && <p className="text-[11px] mt-0.5 opacity-70 truncate" style={{ color: textColor }}>Color: {item.color}</p>}
+                          <p className="text-sm font-black mt-0.5" style={{ color: textColor }}>${price.toFixed(2)}</p>
                         </div>
 
-                        <div className="flex flex-col items-center gap-2">
-                          <button onClick={() => removeCartItem(item.id)} className="absolute top-2 right-2 p-1.5 text-red-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                          <div className="flex items-center gap-3 rounded-lg p-1 border border-black/10 mt-4" style={{ backgroundColor: cardColor }}>
+                        {/* CONTROLES MÁS COMPACTOS */}
+                        <div className="flex flex-col items-end">
+                          <button onClick={() => removeCartItem(item.id)} className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <div className="flex items-center gap-1.5 rounded-lg p-0.5 border border-black/10 mt-5" style={{ backgroundColor: cardColor }}>
                             <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Minus className="w-3 h-3" /></button>
-                            <span className="text-sm font-bold w-4 text-center" style={{ color: textColor }}>{item.quantity}</span>
+                            <span className="text-xs font-bold w-4 text-center" style={{ color: textColor }}>{item.quantity}</span>
                             <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Plus className="w-3 h-3" /></button>
                           </div>
                         </div>
