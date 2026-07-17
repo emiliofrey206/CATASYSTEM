@@ -105,37 +105,44 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
           </div>
         </div>
 
-        {/* LISTA DE COLORES OPTIMIZADA */}
+        {/* LISTA DE COLORES BLINDADA PARA LECTURA CLARA */}
         <div className="flex-1">
           {colors.length === 0 ? (
              <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50">
                <p className="text-slate-500 font-medium">No hay colores registrados en esta tienda.</p>
              </div>
           ) : (
-            /* SOLUCIÓN: sm:grid-cols-2, lg:grid-cols-2, xl:grid-cols-3 y gap ajustado */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+            /* SOLUCIÓN DE ARQUITECTURA VISUAL: 
+               - grid-cols-1 por defecto (máximo espacio)
+               - xl:grid-cols-2 solo en monitores muy grandes 
+            */
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               {colors.map((color) => {
                 const hexColor = color.colorCode || (color as any).value || (color as any).hex || '#e2e8f0'; 
                 
                 return (
-                <div key={color.id} className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-3 hover:shadow-md transition-shadow">
+                <div key={color.id} className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4 flex items-center justify-between hover:shadow-md transition-shadow">
                   
-                  {/* Círculo de Color un poco más compacto */}
-                  <div className="w-10 h-10 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: hexColor }}></div>
-                  
-                  {/* Contenedor de Texto con truncate seguro */}
-                  <div className="flex-1 min-w-0" title={color.name}>
-                    <h4 className="text-sm font-bold text-slate-900 uppercase truncate">{color.name}</h4>
-                    <p className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">{hexColor}</p>
+                  {/* Contenedor Izquierdo: Círculo y Textos */}
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 pr-4">
+                    
+                    {/* Círculo de Color */}
+                    <div className="w-12 h-12 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: hexColor }}></div>
+                    
+                    {/* Textos SIN TRUNCATE, libres para usar todo el espacio */}
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 uppercase leading-tight">{color.name}</h4>
+                      <p className="text-[10px] sm:text-xs text-slate-500 font-mono uppercase mt-1">{hexColor}</p>
+                    </div>
                   </div>
                   
-                  {/* Botones de Acción limpios */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button onClick={() => handleEdit(color)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar">
-                      <Edit2 className="w-4 h-4" />
+                  {/* Botones de Acción: Siempre a la derecha, inamovibles */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => handleEdit(color)} className="p-2 sm:p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg sm:rounded-xl transition-colors" title="Editar">
+                      <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
-                    <button onClick={() => handleDelete(color.id, color.name)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => handleDelete(color.id, color.name)} className="p-2 sm:p-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg sm:rounded-xl transition-colors" title="Eliminar">
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   </div>
 
