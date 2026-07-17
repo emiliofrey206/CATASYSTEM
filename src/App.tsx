@@ -92,7 +92,7 @@ function AdminLayout() {
       {/* FOOTER DEL PANEL ADMINISTRATIVO */}
         <footer className="w-full text-center py-6 mt-12 border-t border-slate-200">
         <p className="text-[10px] sm:text-xs font-black tracking-widest text-slate-400 uppercase">
-         Sistema desarrollado por el Ingeniero Emilio Frey
+         CataSystem Desarrollado por ING. EMILIO FREY, 2026
         </p>
         </footer>
     </div>
