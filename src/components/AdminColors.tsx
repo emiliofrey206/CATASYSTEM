@@ -14,15 +14,16 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [colorCode, setColorCode] = useState('#000000');
+  const [value, setValue] = useState('#000000'); // Corregido: Usamos 'value'
   const [isSaving, setIsSaving] = useState(false);
 
   // Carga los datos del color seleccionado en el formulario
-  const handleEdit = (color: Color) => {
+  const handleEdit = (color: any) => {
     setIsEditing(true);
     setEditingId(color.id);
     setName(color.name);
-    setColorCode(color.colorCode || '#000000');
+    // Escudo: Lee el color sin importar cómo se llame en tu Base de Datos
+    setValue(color.value || color.hex || color.colorCode || '#000000');
   };
 
   // Limpia el formulario y vuelve a "Nuevo Color"
@@ -30,7 +31,7 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
     setIsEditing(false);
     setEditingId(null);
     setName('');
-    setColorCode('#000000');
+    setValue('#000000');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,9 +41,10 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
     setIsSaving(true);
     try {
       if (isEditing && editingId) {
-        await updateColor(editingId, { name, colorCode });
+        // CORRECCIÓN: Enviamos 'value' a Supabase
+        await updateColor(editingId, { name, value } as any);
       } else {
-        await addColor({ name, colorCode, storeId: activeStore.id });
+        await addColor({ name, value, storeId: activeStore.id } as any);
       }
       handleCancel(); // Limpiamos al terminar
     } catch (error) {
@@ -85,8 +87,8 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Tono Visual</label>
                 <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-                  <input type="color" value={colorCode} onChange={e => setColorCode(e.target.value)} className="w-10 h-10 rounded cursor-pointer border-0 p-0" />
-                  <input type="text" value={colorCode} onChange={e => setColorCode(e.target.value)} className="flex-1 text-sm font-mono border-none focus:outline-none uppercase" placeholder="#000000" />
+                  <input type="color" value={value} onChange={e => setValue(e.target.value)} className="w-10 h-10 rounded cursor-pointer border-0 p-0" />
+                  <input type="text" value={value} onChange={e => setValue(e.target.value)} className="flex-1 text-sm font-mono border-none focus:outline-none uppercase" placeholder="#000000" />
                 </div>
               </div>
 
@@ -104,33 +106,42 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
           </div>
         </div>
 
-        {/* LISTA DE COLORES (CON HOVER DE EDICIÓN) */}
+        {/* LISTA DE COLORES (RESTAURADA A SU TAMAÑO ORIGINAL) */}
         <div className="flex-1">
           {colors.length === 0 ? (
              <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50">
                <p className="text-slate-500 font-medium">No hay colores registrados en esta tienda.</p>
              </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {colors.map(color => (
-                <div key={color.id} className="group bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 hover:shadow-md transition-shadow relative overflow-hidden">
-                  <div className="w-12 h-12 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: color.colorCode }}></div>
-                  <div className="flex-1 min-w-0 pr-12">
-                    <h4 className="font-bold text-slate-900 truncate">{color.name}</h4>
-                    <p className="text-xs text-slate-500 font-mono uppercase">{color.colorCode}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {colors.map((color: any) => {
+                // Escudo protector para pintar el color correctamente
+                const hexColor = color.value || color.hex || color.colorCode || '#e2e8f0';
+                
+                return (
+                <div key={color.id} className="group bg-white border border-slate-200 rounded-2xl p-3 flex items-center gap-3 hover:shadow-md transition-shadow relative overflow-hidden">
+                  
+                  {/* Círculo de Color */}
+                  <div className="w-10 h-10 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: hexColor }}></div>
+                  
+                  {/* Textos */}
+                  <div className="flex-1 min-w-0 pr-8">
+                    <h4 className="text-sm font-bold text-slate-900 uppercase truncate">{color.name}</h4>
+                    <p className="text-[10px] text-slate-500 font-mono uppercase truncate">{hexColor}</p>
                   </div>
                   
-                  {/* ACCIONES OCULTAS QUE APARECEN AL PASAR EL MOUSE (HOVER) */}
+                  {/* Botones de Acción (Aparecen al pasar el mouse) */}
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm p-1 rounded-lg">
-                    <button onClick={() => handleEdit(color)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                    <button onClick={() => handleEdit(color)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(color.id, color.name)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                    <button onClick={() => handleDelete(color.id, color.name)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
