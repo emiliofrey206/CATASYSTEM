@@ -272,7 +272,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
       {/* NUEVO: SELLO DEL DESARROLLADOR EN EL CATÁLOGO */}
       <footer className="w-full text-center py-8 mt-auto px-4 opacity-50 hover:opacity-100 transition-opacity duration-300">
         <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: textColor }}>
-          Sistema desarrollado por el Ingeniero Emilio Frey
+          CataSystem Desarrollado por ING. EMILIO FREY, 2026
         </p>
       </footer>
 
