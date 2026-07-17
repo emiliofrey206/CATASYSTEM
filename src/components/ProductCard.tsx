@@ -1,15 +1,16 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ShoppingCart, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
-import { Product, Store } from '../types';
+import { Product, Store, Color } from '../types'; // IMPORTANTE: Agregamos Color
 import { AnimatePresence, motion } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
   store: Store; 
+  colors: Color[]; // IMPORTANTE: Recibimos colores
   onAddToCart?: (product: Product, color: string | null) => void;
 }
 
-export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, store, colors, onAddToCart }: ProductCardProps) {
   const cardColor = store.cardColor || '#ffffff';
   const accentColor = store.accentColor || '#16a34a';
   const textColor = store.textColor || '#0f172a';
@@ -135,18 +136,24 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
           {product.variants && product.variants.length > 0 && (
             <div className="mt-4 pt-4 border-t border-black/5">
               <div className="flex flex-wrap gap-3">
-                {product.variants.map((variant, idx) => (
-                  <button 
-                    key={idx} 
-                    title={variant.color} 
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClick(variant.color, variant.imageUrl); }} 
-                    className={`w-6 h-6 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
-                    style={{ 
-                      backgroundColor: variant.colorCode || '#e2e8f0', 
-                      boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
-                    }} 
-                  />
-                ))}
+                {product.variants.map((variant, idx) => {
+                  // LA MAGIA DE LA ARQUITECTURA: Buscamos el color maestro para asegurar 100% de actualización
+                  const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
+                  const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
+
+                  return (
+                    <button 
+                      key={idx} 
+                      title={variant.color} 
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClick(variant.color, variant.imageUrl); }} 
+                      className={`w-6 h-6 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
+                      style={{ 
+                        backgroundColor: hexColor, 
+                        boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
+                      }} 
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
@@ -243,17 +250,22 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
                   <div className="mb-4">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider mb-3 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'}</span></h4>
                     <div className="flex flex-wrap gap-4">
-                        {product.variants.map((variant, idx) => (
-                          <button 
-                            key={idx} 
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClickModal(variant.color, variant.imageUrl); }} 
-                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
-                            style={{ 
-                              backgroundColor: variant.colorCode || '#e2e8f0', 
-                              boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
-                            }} 
-                          />
-                        ))}
+                        {product.variants.map((variant, idx) => {
+                          const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
+                          const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
+
+                          return (
+                            <button 
+                              key={idx} 
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClickModal(variant.color, variant.imageUrl); }} 
+                              className={`w-7 h-7 md:w-8 md:h-8 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
+                              style={{ 
+                                backgroundColor: hexColor, 
+                                boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
+                              }} 
+                            />
+                          );
+                        })}
                     </div>
                   </div>
                 )}
