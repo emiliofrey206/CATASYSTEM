@@ -191,20 +191,23 @@ class CatalogStore {
   // ==========================================
 
   addColor = async (colorData: any) => {
-    // 1. PRIMERO enviamos a la Base de Datos real
+    // Generamos un ID único en el frontend como seguro de vida
+    const colorWithId = {
+      ...colorData,
+      id: colorData.id || crypto.randomUUID() 
+    };
+
     const { data, error } = await supabase
       .from('colors')
-      .insert([colorData])
+      .insert([colorWithId])
       .select()
-      .single(); // Exigimos que la BD nos devuelva el registro exacto creado
+      .single();
 
-    // 2. Si la Base de Datos falla, detenemos todo y avisamos (SIN ESPEJISMOS)
     if (error) {
-      alert(`ERROR CRÍTICO: El color no se guardó en la Base de Datos.\nMotivo: ${error.message}`);
+      alert(`ERROR CRÍTICO: El color no se guardó.\nMotivo: ${error.message}`);
       throw error;
     }
 
-    // 3. SOLO SI FUE EXITOSO, la pantalla se actualiza con el dato real confirmado
     this.colors = [...this.colors, data];
     this.notify();
   }
