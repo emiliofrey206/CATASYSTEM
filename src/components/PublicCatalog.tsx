@@ -352,29 +352,37 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     let cartItemImage = item.product.imageUrl;
                     if (item.color && item.product.variants) { const variantInfo = item.product.variants.find(v => v.color === item.color); if (variantInfo && variantInfo.imageUrl) cartItemImage = variantInfo.imageUrl; }
                     if (!cartItemImage && item.product.variants && item.product.variants.length > 0) cartItemImage = item.product.variants[0].imageUrl;
+                    
                     return (
-                      <div key={item.id} className="p-2.5 rounded-2xl border border-black/5 flex gap-3 items-center shadow-sm relative" style={{ backgroundColor: cartItemBgColor }}>
-                        {/* IMAGEN MÁS COMPACTA */}
-                        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
-                          {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 m-4 opacity-30" style={{ color: textColor }} />}
+                      <div key={item.id} className="p-3 rounded-2xl border border-black/5 flex gap-3 shadow-sm relative" style={{ backgroundColor: cartItemBgColor }}>
+                        
+                        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
+                          {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 m-5 opacity-30" style={{ color: textColor }} />}
                         </div>
                         
-                        {/* TEXTOS COMPACTOS CON TRUNCATE */}
-                        <div className="flex-1 min-w-0 pr-7">
-                          <h4 className="text-sm font-bold truncate" style={{ color: textColor }}>{item.product.name}</h4>
-                          {item.color && <p className="text-[11px] mt-0.5 opacity-70 truncate" style={{ color: textColor }}>Color: {item.color}</p>}
-                          <p className="text-sm font-black mt-0.5" style={{ color: textColor }}>${price.toFixed(2)}</p>
+                        {/* Contenedor principal que ahora ocupa TODO el ancho disponible */}
+                        <div className="flex-1 flex flex-col justify-center min-w-0">
+                          
+                          {/* Título más pequeño y sin límite, con padding para no chocar con la papelera */}
+                          <div className="pr-7">
+                            <h4 className="text-[13px] font-bold leading-tight" style={{ color: textColor }}>{item.product.name}</h4>
+                            {item.color && <p className="text-[11px] mt-0.5 opacity-70" style={{ color: textColor }}>Color: {item.color}</p>}
+                          </div>
+
+                          {/* Fila inferior: Precio y Controles juntos */}
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-sm font-black" style={{ color: textColor }}>${price.toFixed(2)}</p>
+                            
+                            <div className="flex items-center gap-1.5 rounded-lg p-0.5 border border-black/10" style={{ backgroundColor: cardColor }}>
+                              <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Minus className="w-3 h-3" /></button>
+                              <span className="text-xs font-bold w-4 text-center" style={{ color: textColor }}>{item.quantity}</span>
+                              <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Plus className="w-3 h-3" /></button>
+                            </div>
+                          </div>
+                          
                         </div>
 
-                        {/* CONTROLES MÁS COMPACTOS */}
-                        <div className="flex flex-col items-end">
-                          <button onClick={() => removeCartItem(item.id)} className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                          <div className="flex items-center gap-1.5 rounded-lg p-0.5 border border-black/10 mt-5" style={{ backgroundColor: cardColor }}>
-                            <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Minus className="w-3 h-3" /></button>
-                            <span className="text-xs font-bold w-4 text-center" style={{ color: textColor }}>{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Plus className="w-3 h-3" /></button>
-                          </div>
-                        </div>
+                        <button onClick={() => removeCartItem(item.id)} className="absolute top-3 right-3 p-1.5 text-red-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     );
                   })
