@@ -42,6 +42,17 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
 
   useEffect(() => { uiState.current = { category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen }; }, [selectedCategory, isMobileFiltersOpen, isSearchMobileOpen, isCartOpen]);
 
+  // --- NUEVO: CAMBIO DINÁMICO DEL TÍTULO DE LA PESTAÑA ---
+  useEffect(() => {
+    if (store && store.name) {
+      document.title = `${store.name} | Catálogo`;
+    }
+    // Al salir del catálogo, devuelve el nombre al original del sistema
+    return () => {
+      document.title = 'CATASYSTEM';
+    };
+  }, [store.name]);
+
   useEffect(() => {
     window.history.pushState({ view: 'home' }, '');
     const handleBack = () => {
@@ -107,11 +118,9 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
 
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  // --- LOGICA DE WHATSAPP DINÁMICA ---
   const handleCheckoutWhatsApp = () => {
-    // Si la tienda tiene número, le quitamos espacios y signos (+). Si no tiene, usa un default o alerta.
     const rawNumber = store.whatsapp || "584120000000"; 
-    const cleanNumber = rawNumber.replace(/\D/g, ''); // Limpia todo lo que no sea número
+    const cleanNumber = rawNumber.replace(/\D/g, ''); 
 
     if (!store.whatsapp) {
       alert("Nota: Esta tienda aún no tiene un número de WhatsApp configurado. Se enviará a un número por defecto.");
@@ -150,7 +159,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   );
 
   return (
-    <div className="min-h-screen font-sans selection:bg-black/10 relative pb-24 lg:pb-0 transition-colors duration-500" style={{ backgroundColor: bgColor, color: textColor }}>
+    <div className="min-h-screen font-sans selection:bg-black/10 relative pb-24 lg:pb-0 transition-colors duration-500 flex flex-col" style={{ backgroundColor: bgColor, color: textColor }}>
       
       <header className="lg:hidden flex items-center justify-between h-16 px-4 border-b border-black/5 sticky top-0 z-40 shadow-sm transition-colors duration-500" style={{ backgroundColor: headerColor }}>
         <button onClick={() => { setIsMobileFiltersOpen(true); window.history.pushState({ view: 'menu' }, ''); }} className="p-2 -ml-2 rounded-full transition-colors opacity-80" style={{ color: textColor }}><Menu className="w-6 h-6" /></button>
@@ -174,7 +183,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
-      <header className="hidden lg:flex items-center justify-between h-24 px-8 max-w-7xl mx-auto mb-4 shrink-0 rounded-b-3xl shadow-sm transition-colors duration-500" style={{ backgroundColor: headerColor }}>
+      <header className="hidden lg:flex items-center justify-between h-24 px-8 max-w-7xl mx-auto mb-4 shrink-0 rounded-b-3xl shadow-sm transition-colors duration-500 w-full" style={{ backgroundColor: headerColor }}>
         <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleSelectCategory('Inicio')}>
           {store.logoUrl ? <img src={store.logoUrl} alt={store.name} className="w-16 h-16 rounded-2xl object-cover shadow-sm" /> : <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm" style={{ backgroundColor: accentColor }}><ShoppingBag className="h-7 w-7 text-white" /></div>}
           <h1 className="text-4xl font-black tracking-tight uppercase truncate max-w-md" style={{ color: textColor }}>{store.name}</h1>
@@ -187,8 +196,8 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 h-full">
-        <div className="flex flex-col lg:flex-row lg:gap-8">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+        <div className="flex flex-col lg:flex-row lg:gap-8 h-full">
           
           <aside className="lg:w-72 flex-shrink-0 hidden lg:block">
             <div className="rounded-3xl p-5 flex flex-col gap-6 sticky top-6 shadow-sm border border-black/5 transition-colors duration-500" style={{ backgroundColor: cardColor }}><CategoryNavigation /></div>
@@ -259,6 +268,13 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
           </section>
         </div>
       </main>
+
+      {/* NUEVO: SELLO DEL DESARROLLADOR EN EL CATÁLOGO */}
+      <footer className="w-full text-center py-8 mt-auto px-4 opacity-50 hover:opacity-100 transition-opacity duration-300">
+        <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: textColor }}>
+          Sistema desarrollado por el Ingeniero Emilio Frey
+        </p>
+      </footer>
 
       <AnimatePresence>
         {toastMessage && (
