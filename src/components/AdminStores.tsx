@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Store as StoreIcon, Plus, X, Edit2, Trash2, Link as LinkIcon, Image as ImageIcon, MessageCircle, Instagram, FileText } from 'lucide-react';
+import { Store as StoreIcon, Plus, X, Edit2, Trash2, Link as LinkIcon, Image as ImageIcon, MessageCircle, Instagram, FileText, Upload, Loader2 } from 'lucide-react';
 import { Store } from '../types';
+import { supabase } from '../supabase'; // IMPORTANTE PARA PODER SUBIR LA IMAGEN
 
 interface AdminStoresProps {
   stores: Store[];
@@ -13,6 +14,9 @@ export function AdminStores({ stores, addStore, updateStore, deleteStore }: Admi
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Nuevo estado para mostrar que la imagen está cargando
+  const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -51,6 +55,35 @@ export function AdminStores({ stores, addStore, updateStore, deleteStore }: Admi
     setFormData(prev => ({ ...prev, name: newName, slug: editingStore ? prev.slug : generateSlug(newName) }));
   };
 
+  // --- FUNCIÓN PARA SUBIR IMAGEN DESDE LA GALERÍA DEL TELÉFONO ---
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+
+      // ¡OJO! Si tu bucket en Supabase se llama diferente, cambia 'images' por el tuyo
+      const { error: uploadError } = await supabase.storage
+        .from('images') 
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Obtener el enlace público de la imagen subida
+      const { data } = supabase.storage.from('images').getPublicUrl(fileName);
+      
+      // Llenamos el formulario automáticamente con la URL de la imagen
+      setFormData(prev => ({ ...prev, logoUrl: data.publicUrl }));
+    } catch (error: any) {
+      alert(`Error subiendo imagen: ${error.message}\n(Verifica que el bucket 'images' exista en tu Supabase Storage)`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.slug) return alert('El nombre y el enlace (slug) son obligatorios.');
@@ -71,7 +104,7 @@ export function AdminStores({ stores, addStore, updateStore, deleteStore }: Admi
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`¿ESTÁS SEGURO? Eliminar la tienda "${name}" es una acción irreversible y podrías perder el acceso a sus productos.`)) {
+    if (window.confirm(`¿ESTÁS SEGURO? Eliminar la tienda "${name}" es una acción irreversible.`)) {
       await deleteStore(id);
     }
   };
@@ -123,7 +156,6 @@ export function AdminStores({ stores, addStore, updateStore, deleteStore }: Admi
                 <h3 className="text-lg font-black text-slate-900 uppercase truncate">{store.name}</h3>
                 {store.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{store.description}</p>}
                 
-                {/* Redes Sociales Icons */}
                 <div className="flex items-center gap-3 mt-3">
                   {store.whatsapp && <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md"><MessageCircle className="w-3 h-3" /> Configurado</div>}
                   {store.instagram && <div className="flex items-center gap-1 text-[10px] font-bold text-pink-600 bg-pink-50 px-2 py-1 rounded-md"><Instagram className="w-3 h-3" /> Configurado</div>}
@@ -175,15 +207,30 @@ export function AdminStores({ stores, addStore, updateStore, deleteStore }: Admi
                 </div>
               </div>
 
+              {/* CAMPO DE LOGO MEJORADO PARA TELÉFONOS (CON BOTÓN DE SUBIDA) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Logo de la Tienda (URL)</label>
-                <div className="relative">
-                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input type="url" value={formData.logoUrl} onChange={e => setFormData({ ...formData, logoUrl: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="https://ejemplo.com/logo.png" />
+                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Logo de la Tienda</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input type="url" value={formData.logoUrl} onChange={e => setFormData({ ...formData, logoUrl: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="Enlace o sube la foto..." />
+                  </div>
+                  
+                  <div className="relative shrink-0">
+                    {/* Input invisible nativo para abrir galería en móviles */}
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" disabled={isUploading} />
+                    
+                    {/* Botón visible de subir */}
+                    <button type="button" disabled={isUploading} className="h-full px-4 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold rounded-xl flex items-center justify-center transition-colors">
+                      {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
+
                 {formData.logoUrl && (
-                  <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200 inline-block">
+                  <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200 inline-block relative">
                     <img src={formData.logoUrl} alt="Vista previa logo" className="h-12 object-contain" />
+                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md"><X className="w-3 h-3" /></button>
                   </div>
                 )}
               </div>
@@ -220,7 +267,8 @@ export function AdminStores({ stores, addStore, updateStore, deleteStore }: Admi
               <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors">
                 Cancelar
               </button>
-              <button onClick={handleSubmit} disabled={isSaving} className="px-5 py-2.5 text-sm font-bold text-white bg-black hover:bg-slate-800 rounded-xl transition-colors shadow-md disabled:opacity-50">
+              <button onClick={handleSubmit} disabled={isSaving || isUploading} className="px-5 py-2.5 text-sm font-bold text-white bg-black hover:bg-slate-800 rounded-xl transition-colors shadow-md disabled:opacity-50 flex items-center gap-2">
+                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? 'Guardando...' : (editingStore ? 'Guardar Cambios' : 'Crear Tienda')}
               </button>
             </div>
