@@ -1,15 +1,18 @@
 export interface Store {
-  id: string;
+ id: string;
   name: string;
   slug: string;
   logoUrl?: string;
-  // Colores Generales
+  // DATOS EXTRAS
+  description?: string;
+  whatsapp?: string;
+  instagram?: string;
+  // COLORES
   headerColor?: string;
   bgColor?: string;
   cardColor?: string;
   accentColor?: string;
   textColor?: string;
-  // NUEVO: Colores Específicos (Botones y Etiquetas)
   checkoutBtnColor?: string;
   checkoutBtnTextColor?: string;
   badgeAvailableColor?: string;
