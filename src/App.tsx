@@ -75,6 +75,10 @@ function AdminLayout() {
           <button onClick={() => setCurrentView('admin-products')} className={`flex flex-col items-center gap-1 p-2 text-xs font-medium min-w-[60px] ${currentView === 'admin-products' ? 'text-black' : 'text-slate-500'}`}><LayoutDashboard className="w-5 h-5" /> Productos</button>
           <button onClick={() => setCurrentView('admin-categories')} className={`flex flex-col items-center gap-1 p-2 text-xs font-medium min-w-[60px] ${currentView === 'admin-categories' ? 'text-black' : 'text-slate-500'}`}><LayoutList className="w-5 h-5" /> Categorías</button>
           {/* NUEVO BOTÓN MÓVIL */}
+          <button onClick={() => setCurrentView('admin-colors')} className={`flex flex-col items-center justify-center gap-1 p-2 flex-1 transition-colors ${currentView === 'admin-colors' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>
+  <Palette className="w-5 h-5" />
+  <span className="text-[10px] font-bold">Colores</span>
+</button>
           <button onClick={() => setCurrentView('admin-appearance')} className={`flex flex-col items-center gap-1 p-2 text-xs font-medium min-w-[60px] ${currentView === 'admin-appearance' ? 'text-blue-600' : 'text-slate-500'}`}><Paintbrush className="w-5 h-5" /> Apariencia</button>
         </div>
 
