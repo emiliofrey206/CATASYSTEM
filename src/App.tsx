@@ -83,7 +83,7 @@ function AdminLayout() {
             {currentView === 'admin-stores' && <AdminStores stores={catalog.stores} addStore={catalog.addStore} updateStore={catalog.updateStore} deleteStore={catalog.deleteStore} />}
             {currentView === 'admin-products' && <AdminProducts activeStore={activeStore} products={activeStoreProducts} categories={activeStoreCategories} colors={activeStoreColors} addProduct={catalog.addProduct} updateProduct={catalog.updateProduct} deleteProduct={catalog.deleteProduct} />}
             {currentView === 'admin-categories' && <AdminCategories activeStore={activeStore} categories={activeStoreCategories} addCategory={catalog.addCategory} updateCategory={catalog.updateCategory} deleteCategory={catalog.deleteCategory} />}
-            {currentView === 'admin-colors' && <AdminColors activeStore={activeStore} colors={activeStoreColors} addColor={catalog.addColor} deleteColor={catalog.deleteColor} />}
+            {currentView === 'admin-colors' && <AdminColors activeStore={activeStore} colors={activeStoreColors} addColor={catalog.addColor} updateColor={catalog.updateColor} deleteColor={catalog.deleteColor} />}
             {/* NUEVA PANTALLA */}
             {currentView === 'admin-appearance' && <AdminAppearance activeStore={activeStore} updateStore={catalog.updateStore} />}
           </div>
