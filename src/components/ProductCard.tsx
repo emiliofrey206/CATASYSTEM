@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ShoppingBag, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { ShoppingCart, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { Product, Store } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -22,14 +22,12 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
   const firstVariantImg = product.variants && product.variants.length > 0 ? product.variants[0].imageUrl : '';
   const firstVariantColor = product.variants && product.variants.length > 0 ? product.variants[0].color : null;
   
-  // CORRECCIÓN: Si el producto tiene variantes, pre-seleccionamos el primer color SIEMPRE.
   const defaultColor = firstVariantColor;
   const defaultImage = (defaultColor && firstVariantImg) ? firstVariantImg : product.imageUrl;
 
   const [activeImage, setActiveImage] = useState(defaultImage);
   const [activeColor, setActiveColor] = useState<string | null>(defaultColor);
 
-  // --- CAPAS DE INTERFAZ ---
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);   
   
@@ -91,7 +89,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
     setTouchStartX(null); setTouchEndX(null);
   };
 
-  // CORRECCIÓN: Función blindada para cambiar color
   const handleVariantClick = (colorName: string, imageUrl: string) => {
     setActiveColor(colorName);
     if (imageUrl) setActiveImage(imageUrl);
@@ -109,7 +106,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
 
   return (
     <>
-      {/* 1. TARJETA EN VITRINA (MINIATURA) */}
       <div className="rounded-[2rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full group" style={{ backgroundColor: cardColor, color: textColor }}>
         <div onClick={handleOpenQuickView} className="relative aspect-square bg-black/5 overflow-hidden shrink-0 cursor-pointer">
           {activeImage ? (
@@ -136,7 +132,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
             <p className="text-[11px] sm:text-xs mt-1.5 line-clamp-2 leading-relaxed opacity-70">{product.description}</p>
           </div>
 
-          {/* CORRECCIÓN: Botones de selección de color con boxShadow infalible */}
           {product.variants && product.variants.length > 0 && (
             <div className="mt-4 pt-4 border-t border-black/5">
               <div className="flex flex-wrap gap-3">
@@ -168,12 +163,13 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
               )}
             </div>
             
-            <button disabled={isAgotado} onClick={(e) => { e.stopPropagation(); onAddToCart?.(product, activeColor); }} className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md" style={{ backgroundColor: accentColor, color: '#fff' }}><ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" /></button>
+            <button disabled={isAgotado} onClick={(e) => { e.stopPropagation(); onAddToCart?.(product, activeColor); }} className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md" style={{ backgroundColor: accentColor, color: '#fff' }}>
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* 2. CAPA 1: VISTA RÁPIDA (TARJETA DETALLADA) */}
       <AnimatePresence>
         {isQuickViewOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6" onClick={() => setIsQuickViewOpen(false)}>
@@ -243,7 +239,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
                   <p className="text-xs md:text-sm leading-relaxed opacity-80 whitespace-pre-wrap">{product.description}</p>
                 </div>
 
-                {/* CORRECCIÓN MODAL: Botones de selección de color con boxShadow */}
                 {product.variants && product.variants.length > 0 && (
                   <div className="mb-4">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider mb-3 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'}</span></h4>
@@ -270,7 +265,7 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
                     className="w-full py-3 rounded-xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 shadow-lg"
                     style={{ backgroundColor: accentColor }}
                   >
-                    <ShoppingBag className="w-4 h-4" /> {isAgotado ? 'Producto Agotado' : 'Añadir a mi pedido'}
+                    <ShoppingCart className="w-4 h-4" /> {isAgotado ? 'Producto Agotado' : 'Añadir a mi pedido'}
                   </button>
                 </div>
               </div>
@@ -280,7 +275,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
         )}
       </AnimatePresence>
 
-      {/* 3. CAPA 3: SÚPER AMPLIACIÓN FULLSCREEN (LIGHTBOX MÁXIMO) */}
       <AnimatePresence>
         {isLightboxOpen && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 backdrop-blur-md" onClick={() => setIsLightboxOpen(false)}>
