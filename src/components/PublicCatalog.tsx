@@ -145,7 +145,6 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
 
   const isHomeView = selectedCategory === 'Inicio' && searchQuery === '';
 
-  // --- MENÚ DE NAVEGACIÓN MODIFICADO CON ICONOS ---
   const CategoryNavigation = () => (
     <nav className="space-y-1.5">
       <button onClick={() => handleSelectCategory('Inicio')} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2" style={{ backgroundColor: selectedCategory === 'Inicio' ? accentColor : 'transparent', color: selectedCategory === 'Inicio' ? '#fff' : textColor }}>
@@ -272,6 +271,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
+      {/* --- AQUÍ ESTÁ TU NUEVA FIRMA --- */}
       <footer className="w-full text-center py-8 mt-auto px-4 opacity-50 hover:opacity-100 transition-opacity duration-300">
         <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: textColor }}>
           CataSystem Desarrollado por ING. EMILIO FREY, 2026
@@ -358,11 +358,13 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                         <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
                           {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 m-5 opacity-30" style={{ color: textColor }} />}
                         </div>
-                        <div className="flex-1 min-w-0 pr-4">
-                          <h4 className="text-sm font-bold truncate" style={{ color: textColor }}>{item.product.name}</h4>
+                        
+                        <div className="flex-1 min-w-0 pr-6">
+                          <h4 className="text-sm font-bold leading-tight" style={{ color: textColor }}>{item.product.name}</h4>
                           {item.color && <p className="text-xs mt-0.5 opacity-70" style={{ color: textColor }}>Color: {item.color}</p>}
                           <p className="text-sm font-black mt-1" style={{ color: textColor }}>${price.toFixed(2)}</p>
                         </div>
+
                         <div className="flex flex-col items-center gap-2">
                           <button onClick={() => removeCartItem(item.id)} className="absolute top-2 right-2 p-1.5 text-red-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                           <div className="flex items-center gap-3 rounded-lg p-1 border border-black/10 mt-4" style={{ backgroundColor: cardColor }}>
