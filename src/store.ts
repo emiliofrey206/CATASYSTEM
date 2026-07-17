@@ -194,7 +194,14 @@ class CatalogStore {
     const { error } = await supabase.from('colors').insert([newColor]);
     if (error) alert(`Error guardando color: ${error.message}`);
   }
-
+  
+  updateColor = async (id: string, updatedData: Partial<Color>) => {
+    this.colors = this.colors.map(c => c.id === id ? { ...c, ...updatedData } : c);
+    this.notify();
+    const { error } = await supabase.from('colors').update(updatedData).eq('id', id);
+    if (error) alert(`Error actualizando color: ${error.message}`);
+  }
+  
   deleteColor = async (id: string) => {
     this.colors = this.colors.filter(c => c.id !== id);
     this.notify();
