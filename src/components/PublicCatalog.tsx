@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2, Home, LayoutGrid } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { Product, Category, Store } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -42,12 +42,10 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
 
   useEffect(() => { uiState.current = { category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen }; }, [selectedCategory, isMobileFiltersOpen, isSearchMobileOpen, isCartOpen]);
 
-  // --- NUEVO: CAMBIO DINÁMICO DEL TÍTULO DE LA PESTAÑA ---
   useEffect(() => {
     if (store && store.name) {
       document.title = `${store.name} | Catálogo`;
     }
-    // Al salir del catálogo, devuelve el nombre al original del sistema
     return () => {
       document.title = 'CATASYSTEM';
     };
@@ -147,10 +145,15 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
 
   const isHomeView = selectedCategory === 'Inicio' && searchQuery === '';
 
+  // --- MENÚ DE NAVEGACIÓN MODIFICADO CON ICONOS ---
   const CategoryNavigation = () => (
     <nav className="space-y-1.5">
-      <button onClick={() => handleSelectCategory('Inicio')} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors" style={{ backgroundColor: selectedCategory === 'Inicio' ? accentColor : 'transparent', color: selectedCategory === 'Inicio' ? '#fff' : textColor }}>Inicio (Categorías)</button>
-      <button onClick={() => handleSelectCategory('Todos')} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors" style={{ backgroundColor: selectedCategory === 'Todos' ? accentColor : 'transparent', color: selectedCategory === 'Todos' ? '#fff' : textColor }}>Todos los productos</button>
+      <button onClick={() => handleSelectCategory('Inicio')} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2" style={{ backgroundColor: selectedCategory === 'Inicio' ? accentColor : 'transparent', color: selectedCategory === 'Inicio' ? '#fff' : textColor }}>
+        <Home className="w-4 h-4" /> Inicio
+      </button>
+      <button onClick={() => handleSelectCategory('Todos')} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2" style={{ backgroundColor: selectedCategory === 'Todos' ? accentColor : 'transparent', color: selectedCategory === 'Todos' ? '#fff' : textColor }}>
+        <LayoutGrid className="w-4 h-4" /> Todos los productos
+      </button>
       <div className="pt-2 pb-1"><p className="text-[10px] uppercase font-bold tracking-widest opacity-50 px-3" style={{ color: textColor }}>Explorar</p></div>
       {categories.map((cat) => (
         <button key={cat.id} onClick={() => handleSelectCategory(cat.name)} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors border border-transparent" style={{ backgroundColor: selectedCategory === cat.name ? `${accentColor}20` : 'transparent', color: selectedCategory === cat.name ? accentColor : textColor, borderColor: selectedCategory === cat.name ? accentColor : 'transparent' }}>{cat.name}</button>
@@ -269,10 +272,9 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
-      {/* NUEVO: SELLO DEL DESARROLLADOR EN EL CATÁLOGO */}
       <footer className="w-full text-center py-8 mt-auto px-4 opacity-50 hover:opacity-100 transition-opacity duration-300">
         <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: textColor }}>
-          CataSystem Desarrollado por ING. EMILIO FREY, 2026
+          Sistema desarrollado por el Ingeniero Emilio Frey
         </p>
       </footer>
 
