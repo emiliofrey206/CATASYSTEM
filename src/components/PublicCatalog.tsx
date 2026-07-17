@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2, Home, LayoutGrid } from 'lucide-react';
 import { ProductCard } from './ProductCard';
-import { Product, Category, Store } from '../types';
+import { Product, Category, Store, Color } from '../types'; // IMPORTANTE: Agregamos Color
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PublicCatalogProps {
   store: Store;
   products: Product[];
   categories: Category[];
+  colors: Color[]; // IMPORTANTE: Recibimos los colores maestros
 }
 
 interface CartItem {
@@ -17,7 +18,7 @@ interface CartItem {
   quantity: number;
 }
 
-export function PublicCatalog({ store, products, categories }: PublicCatalogProps) {
+export function PublicCatalog({ store, products, categories, colors }: PublicCatalogProps) {
   const headerColor = store.headerColor || '#ffffff';
   const bgColor = store.bgColor || '#f8fafc';
   const cardColor = store.cardColor || '#ffffff';
@@ -253,7 +254,8 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map((product) => (
                         <motion.div key={product.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}>
-                          <ProductCard product={product} store={store} onAddToCart={handleAddToCart} />
+                          {/* IMPORTANTE: Pasamos los colores maestros a la tarjeta */}
+                          <ProductCard product={product} store={store} colors={colors} onAddToCart={handleAddToCart} />
                         </motion.div>
                       ))}
                     </AnimatePresence>
@@ -354,34 +356,25 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
                     if (!cartItemImage && item.product.variants && item.product.variants.length > 0) cartItemImage = item.product.variants[0].imageUrl;
                     
                     return (
-                      <div key={item.id} className="p-3 rounded-2xl border border-black/5 flex gap-3 shadow-sm relative" style={{ backgroundColor: cartItemBgColor }}>
-                        
-                        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
-                          {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 m-5 opacity-30" style={{ color: textColor }} />}
+                      <div key={item.id} className="p-2.5 rounded-2xl border border-black/5 flex gap-3 shadow-sm relative" style={{ backgroundColor: cartItemBgColor }}>
+                        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-black/5" style={{ backgroundColor: cardColor }}>
+                          {cartItemImage ? <img src={cartItemImage} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 m-4 opacity-30" style={{ color: textColor }} />}
                         </div>
                         
-                        {/* Contenedor principal que ahora ocupa TODO el ancho disponible */}
                         <div className="flex-1 flex flex-col justify-center min-w-0">
-                          
-                          {/* Título más pequeño y sin límite, con padding para no chocar con la papelera */}
                           <div className="pr-7">
                             <h4 className="text-[13px] font-bold leading-tight" style={{ color: textColor }}>{item.product.name}</h4>
                             {item.color && <p className="text-[11px] mt-0.5 opacity-70" style={{ color: textColor }}>Color: {item.color}</p>}
                           </div>
-
-                          {/* Fila inferior: Precio y Controles juntos */}
                           <div className="flex items-center justify-between mt-2">
                             <p className="text-sm font-black" style={{ color: textColor }}>${price.toFixed(2)}</p>
-                            
                             <div className="flex items-center gap-1.5 rounded-lg p-0.5 border border-black/10" style={{ backgroundColor: cardColor }}>
                               <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Minus className="w-3 h-3" /></button>
                               <span className="text-xs font-bold w-4 text-center" style={{ color: textColor }}>{item.quantity}</span>
                               <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Plus className="w-3 h-3" /></button>
                             </div>
                           </div>
-                          
                         </div>
-
                         <button onClick={() => removeCartItem(item.id)} className="absolute top-3 right-3 p-1.5 text-red-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     );
