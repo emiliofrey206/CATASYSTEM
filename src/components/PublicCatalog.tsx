@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle } from 'lucide-react';
+import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { Product, Category, Store } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -34,6 +34,10 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
   const [isSearchMobileOpen, setIsSearchMobileOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
+  // Bandera para la primera vez y estado para la animación (Toast)
+  const [isFirstAdd, setIsFirstAdd] = useState(true);
+  const [toastMessage, setToastMessage] = useState<{ id: number, text: string } | null>(null);
 
   const uiState = useRef({ category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen });
 
@@ -67,8 +71,17 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
       if (existingItem) return prevCart.map(item => item.id === cartItemId ? { ...item, quantity: item.quantity + 1 } : item);
       return [...prevCart, { id: cartItemId, product, color, quantity: 1 }];
     });
-    setIsCartOpen(true); 
-    if (!isCartOpen) window.history.pushState({ view: 'cart' }, '');
+    
+    if (isFirstAdd) {
+      // Primera vez: Abre el carrito
+      setIsCartOpen(true);
+      setIsFirstAdd(false);
+      window.history.pushState({ view: 'cart' }, '');
+    } else {
+      // Siguientes veces: Muestra la notificación animada sin abrir el carrito
+      setToastMessage({ id: Date.now(), text: `Agregado: ${product.name}` });
+      setTimeout(() => setToastMessage(null), 2500); // Se oculta en 2.5 segundos
+    }
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -78,8 +91,22 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
     }));
   };
 
-  const removeCartItem = (id: string) => setCart(prev => prev.filter(item => item.id !== id));
-  const handleClearCart = () => { if (window.confirm('¿Estás seguro de que deseas vaciar por completo tu lista de compras?')) { setCart([]); setIsCartOpen(false); } };
+  const removeCartItem = (id: string) => {
+    setCart(prev => {
+      const newCart = prev.filter(item => item.id !== id);
+      if (newCart.length === 0) {
+        setIsFirstAdd(true); // Reinicia si el carrito queda vacío
+        setIsCartOpen(false);
+      }
+      return newCart;
+    });
+  };
+
+  const handleClearCart = () => { 
+    if (window.confirm('¿Vaciar todo tu pedido?')) { 
+      setCart([]); setIsCartOpen(false); setIsFirstAdd(true); 
+    } 
+  };
 
   const cartTotal = cart.reduce((acc, item) => {
     const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
@@ -173,20 +200,14 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             {isHomeView ? (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
                 
-                {/* --- TÍTULO PRINCIPAL MODIFICADO --- */}
                 <div className="hidden lg:flex items-center justify-between px-2 mb-4">
                   <div className="flex flex-col items-start gap-3">
-                    
-                    {/* Cápsula para el Título Grande */}
                     <div className="px-5 py-2.5 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
                       <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>¿Qué estás buscando?</h2>
                     </div>
-                    
-                    {/* Cápsula para el Subtítulo */}
                     <div className="px-4 py-1.5 rounded-xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
                       <p className="text-sm font-bold" style={{ color: textColor }}>Explora nuestras categorías</p>
                     </div>
-
                   </div>
                 </div>
 
@@ -203,24 +224,18 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 sm:space-y-6">
                 
-                {/* --- TÍTULO DE CATEGORÍAS MODIFICADO --- */}
                 <div className="flex items-center justify-between px-1 sm:px-2 mb-5">
                   <div className="flex flex-col items-start gap-3">
-                    
-                    {/* Cápsula para el Título Grande */}
                     <div className="px-5 py-2.5 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
                       <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: textColor }}>
                         {searchQuery ? 'Resultados' : (selectedCategory === 'Todos' ? 'Todos los productos' : selectedCategory)}
                       </h2>
                     </div>
-                    
-                    {/* Cápsula para el Subtítulo */}
                     <div className="px-4 py-1.5 rounded-xl shadow-sm border border-black/5" style={{ backgroundColor: headerColor }}>
                       <p className="text-sm font-bold" style={{ color: textColor }}>
                         {searchQuery ? `Buscando: "${searchQuery}"` : 'Explorando catálogo'}
                       </p>
                     </div>
-
                   </div>
                 </div>
 
@@ -247,6 +262,22 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         </div>
       </main>
 
+      {/* 🟢 NUEVO: ANIMACIÓN DE CONFIRMACIÓN FLOTANTE (TOAST) */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            key={toastMessage.id}
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold w-[90%] max-w-xs justify-center"
+          >
+            <CheckCircle2 className="w-5 h-5 text-green-400" />
+            <span className="truncate">{toastMessage.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* BOTÓN FLOTANTE DEL CARRITO */}
       <AnimatePresence>
         {cartItemCount > 0 && !isCartOpen && (
@@ -265,6 +296,7 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
+      {/* MENÚ MÓVIL (FILTROS) */}
       <AnimatePresence>
         {isMobileFiltersOpen && (
           <>
@@ -280,11 +312,17 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
         )}
       </AnimatePresence>
 
+      {/* DRAWER DEL CARRITO (AHORA OCUPA 85% Y DEJA FRANJA IZQUIERDA LIBRE) */}
       <AnimatePresence>
         {isCartOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={() => setIsCartOpen(false)} />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', bounce: 0, duration: 0.4 }} className="fixed inset-y-0 right-0 w-full max-w-md z-50 flex flex-col shadow-2xl" style={{ backgroundColor: cardColor }}>
+            <motion.div 
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} 
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }} 
+              className="fixed top-0 right-0 h-full w-[85%] max-w-sm z-50 flex flex-col shadow-2xl" 
+              style={{ backgroundColor: cardColor }}
+            >
               
               <div className="flex justify-between items-center p-6 border-b border-black/5 shrink-0" style={{ backgroundColor: headerColor }}>
                 <div className="flex items-center gap-3">
@@ -331,12 +369,18 @@ export function PublicCatalog({ store, products, categories }: PublicCatalogProp
               </div>
 
               {cart.length > 0 && (
-                <div className="p-6 border-t border-black/5 shrink-0" style={{ backgroundColor: cardColor }}>
+                <div className="p-4 sm:p-6 border-t border-black/5 shrink-0" style={{ backgroundColor: cardColor }}>
                   <div className="flex justify-between items-center mb-4">
                     <span className="font-semibold opacity-70" style={{ color: textColor }}>Total a pagar</span>
                     <span className="text-2xl font-black" style={{ color: textColor }}>${cartTotal.toFixed(2)}</span>
                   </div>
-                  <button onClick={handleCheckoutWhatsApp} className="w-full px-5 py-4 rounded-2xl text-base font-black flex items-center justify-center gap-3 active:scale-95 shadow-lg" style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}>
+                  
+                  {/* NUEVO BOTÓN: SEGUIR COMPRANDO */}
+                  <button onClick={() => setIsCartOpen(false)} className="w-full mb-3 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-black/10 transition-colors opacity-80 hover:opacity-100" style={{ color: textColor }}>
+                    <ArrowLeft className="w-4 h-4" /> Seguir comprando
+                  </button>
+
+                  <button onClick={handleCheckoutWhatsApp} className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-3 active:scale-95 shadow-lg" style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}>
                     <MessageCircle className="w-6 h-6" /> Enviar Pedido
                   </button>
                 </div>
