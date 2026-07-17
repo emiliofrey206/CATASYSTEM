@@ -109,7 +109,15 @@ function PublicCatalogView() {
   if (!catalog.isLoaded) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
   const store = catalog.stores.find(s => s.slug === slug);
   if (!store) return <div className="min-h-screen flex items-center justify-center text-slate-500">Catálogo no encontrado.</div>;
-  return <PublicCatalog store={store} products={catalog.products.filter(p => p.storeId === store.id)} categories={catalog.categories.filter(c => c.storeId === store.id)} />;
+  
+  return (
+    <PublicCatalog 
+      store={store} 
+      products={catalog.products.filter(p => p.storeId === store.id)} 
+      categories={catalog.categories.filter(c => c.storeId === store.id)} 
+      colors={catalog.colors.filter(c => c.storeId === store.id)} 
+    />
+  );
 }
 
 export default function App() {
