@@ -186,26 +186,63 @@ class CatalogStore {
     await supabase.from('categories').delete().eq('id', id);
   }
 
-  addColor = async (colorData: Omit<Color, 'id' | 'storeId'>) => {
-    const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
-    const newColor = { ...colorData, id: `col-${Date.now()}`, storeId };
-    this.colors = [...this.colors, newColor];
+ // ==========================================
+  // MÓDULO DE COLORES: ARQUITECTURA BLINDADA
+  // ==========================================
+
+  addColor = async (colorData: any) => {
+    // 1. PRIMERO enviamos a la Base de Datos real
+    const { data, error } = await supabase
+      .from('colors')
+      .insert([colorData])
+      .select()
+      .single(); // Exigimos que la BD nos devuelva el registro exacto creado
+
+    // 2. Si la Base de Datos falla, detenemos todo y avisamos (SIN ESPEJISMOS)
+    if (error) {
+      alert(`ERROR CRÍTICO: El color no se guardó en la Base de Datos.\nMotivo: ${error.message}`);
+      throw error;
+    }
+
+    // 3. SOLO SI FUE EXITOSO, la pantalla se actualiza con el dato real confirmado
+    this.colors = [...this.colors, data];
     this.notify();
-    const { error } = await supabase.from('colors').insert([newColor]);
-    if (error) alert(`Error guardando color: ${error.message}`);
   }
-  
-  updateColor = async (id: string, updatedData: Partial<Color>) => {
-    this.colors = this.colors.map(c => c.id === id ? { ...c, ...updatedData } : c);
+
+  updateColor = async (id: string, updatedData: any) => {
+    // 1. Intentamos actualizar la Base de Datos real
+    const { data, error } = await supabase
+      .from('colors')
+      .update(updatedData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      alert(`ERROR CRÍTICO: No se actualizó en la Base de Datos.\nMotivo: ${error.message}`);
+      throw error;
+    }
+
+    // 2. Actualizamos la pantalla solo tras la confirmación
+    this.colors = this.colors.map(c => c.id === id ? { ...c, ...data } : c);
     this.notify();
-    const { error } = await supabase.from('colors').update(updatedData).eq('id', id);
-    if (error) alert(`Error actualizando color: ${error.message}`);
   }
-  
+
   deleteColor = async (id: string) => {
+    // 1. Intentamos eliminar el registro de la Base de Datos
+    const { error } = await supabase
+      .from('colors')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert(`ERROR CRÍTICO: No se pudo eliminar de la Base de Datos.\nMotivo: ${error.message}`);
+      throw error;
+    }
+
+    // 2. Si la BD lo eliminó con éxito, lo borramos de la pantalla
     this.colors = this.colors.filter(c => c.id !== id);
     this.notify();
-    await supabase.from('colors').delete().eq('id', id);
   }
 }
 
