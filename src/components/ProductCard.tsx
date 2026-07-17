@@ -22,15 +22,16 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
   const firstVariantImg = product.variants && product.variants.length > 0 ? product.variants[0].imageUrl : '';
   const firstVariantColor = product.variants && product.variants.length > 0 ? product.variants[0].color : null;
   
-  const defaultImage = product.imageUrl || firstVariantImg;
-  const defaultColor = !product.imageUrl && firstVariantColor ? firstVariantColor : null;
+  // CORRECCIÓN: Si el producto tiene variantes, pre-seleccionamos el primer color SIEMPRE.
+  const defaultColor = firstVariantColor;
+  const defaultImage = (defaultColor && firstVariantImg) ? firstVariantImg : product.imageUrl;
 
   const [activeImage, setActiveImage] = useState(defaultImage);
   const [activeColor, setActiveColor] = useState<string | null>(defaultColor);
 
   // --- CAPAS DE INTERFAZ ---
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); // Capa 1: Tarjeta Detallada
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);   // Capa 2: Súper Ampliación Completa
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); 
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);   
   
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -46,34 +47,29 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
     return images;
   }, [product]);
 
-  // --- CONTROL DE HISTORIAL Y SCROLL EN TÁNDEM ---
   useEffect(() => {
     if (isQuickViewOpen || isLightboxOpen) {
       document.body.style.overflow = 'hidden';
-      document.body.dataset.galleryOpen = 'true'; // Avisa al catálogo principal
+      document.body.dataset.galleryOpen = 'true'; 
     } else {
       document.body.style.overflow = 'auto';
       document.body.dataset.galleryOpen = 'false';
     }
   }, [isQuickViewOpen, isLightboxOpen]);
 
-  // Atrapador de botón atrás para la Vista Rápida
   useEffect(() => {
     if (!isQuickViewOpen) return;
     const handleQuickViewBack = () => {
-      if (isLightboxOpen) return; // Si la foto gigante está encima, ella se encarga
+      if (isLightboxOpen) return; 
       setIsQuickViewOpen(false);
     };
     window.addEventListener('popstate', handleQuickViewBack);
     return () => window.removeEventListener('popstate', handleQuickViewBack);
   }, [isQuickViewOpen, isLightboxOpen]);
 
-  // Atrapador de botón atrás para la Súper Ampliación
   useEffect(() => {
     if (!isLightboxOpen) return;
-    const handleLightboxBack = () => {
-      setIsLightboxOpen(false);
-    };
+    const handleLightboxBack = () => { setIsLightboxOpen(false); };
     window.addEventListener('popstate', handleLightboxBack);
     return () => window.removeEventListener('popstate', handleLightboxBack);
   }, [isLightboxOpen]);
@@ -85,7 +81,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
     setIsQuickViewOpen(true);
   };
 
-  // --- REGLAS DE DESLIZAMIENTO CON EL DEDO (SWIPE) ---
   const handleTouchStart = (e: React.TouchEvent) => { setTouchEndX(null); setTouchStartX(e.targetTouches[0].clientX); };
   const handleTouchMove = (e: React.TouchEvent) => { setTouchEndX(e.targetTouches[0].clientX); };
   const handleTouchEnd = () => {
@@ -94,6 +89,14 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
     if (distance > 50 && allImages.length > 1) setGalleryIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
     if (distance < -50 && allImages.length > 1) setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
     setTouchStartX(null); setTouchEndX(null);
+  };
+
+  // CORRECCIÓN: Función blindada para cambiar color
+  const handleVariantClick = (colorName: string, imageUrl: string) => {
+    setActiveColor(colorName);
+    if (imageUrl) setActiveImage(imageUrl);
+    else if (product.imageUrl) setActiveImage(product.imageUrl);
+    else if (firstVariantImg) setActiveImage(firstVariantImg);
   };
 
   const handleVariantClickModal = (colorName: string, imageUrl: string) => {
@@ -133,11 +136,21 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
             <p className="text-[11px] sm:text-xs mt-1.5 line-clamp-2 leading-relaxed opacity-70">{product.description}</p>
           </div>
 
+          {/* CORRECCIÓN: Botones de selección de color con boxShadow infalible */}
           {product.variants && product.variants.length > 0 && (
             <div className="mt-4 pt-4 border-t border-black/5">
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-3">
                 {product.variants.map((variant, idx) => (
-                  <button key={idx} title={variant.color} onClick={() => handleVariantClick(variant.color, variant.imageUrl)} className={`w-6 h-6 rounded-full transition-all active:scale-95 ${activeColor === variant.color ? 'ring-2 ring-offset-2 scale-110 shadow-sm' : 'border border-black/10 hover:scale-110 shadow-sm'}`} style={{ backgroundColor: variant.colorCode || '#e2e8f0', ringColor: textColor }} />
+                  <button 
+                    key={idx} 
+                    title={variant.color} 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClick(variant.color, variant.imageUrl); }} 
+                    className={`w-6 h-6 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
+                    style={{ 
+                      backgroundColor: variant.colorCode || '#e2e8f0', 
+                      boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
+                    }} 
+                  />
                 ))}
               </div>
             </div>
@@ -174,7 +187,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
                 <X className="w-5 h-5" style={{ color: textColor }} />
               </button>
 
-              {/* Imagen interactiva - SE COLOCÓ CURSOR-POINTER Y ONCLICK PARA AMPLIAR MÁS */}
               <div 
                 className="w-full md:w-1/2 h-[30vh] sm:h-[40vh] md:h-auto relative bg-black/5 flex-shrink-0 touch-pan-y cursor-pointer group/modal"
                 onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
@@ -188,7 +200,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
                   />
                 </AnimatePresence>
 
-                {/* Indicador de lupa flotante sobre la foto en la vista rápida */}
                 <div className="absolute inset-0 bg-black/0 group-hover/modal:bg-black/5 transition-colors flex items-center justify-center">
                   <div className="bg-white/90 p-2.5 rounded-full shadow-md text-slate-700 opacity-0 group-hover/modal:opacity-100 md:opacity-60 transition-opacity">
                     <Maximize2 className="w-4 h-4" />
@@ -212,7 +223,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
                 </div>
               </div>
 
-              {/* Detalles */}
               <div className="w-full md:w-1/2 p-4 sm:p-6 md:p-8 flex flex-col overflow-y-auto">
                 <span className="inline-block text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest mb-2 opacity-80 border w-max" style={{ borderColor: textColor }}>{product.category}</span>
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-black leading-tight mb-2">{product.name}</h2>
@@ -233,12 +243,21 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
                   <p className="text-xs md:text-sm leading-relaxed opacity-80 whitespace-pre-wrap">{product.description}</p>
                 </div>
 
+                {/* CORRECCIÓN MODAL: Botones de selección de color con boxShadow */}
                 {product.variants && product.variants.length > 0 && (
                   <div className="mb-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider mb-2 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'}</span></h4>
-                    <div className="flex flex-wrap gap-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider mb-3 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'}</span></h4>
+                    <div className="flex flex-wrap gap-4">
                         {product.variants.map((variant, idx) => (
-                          <button key={idx} onClick={() => handleVariantClickModal(variant.color, variant.imageUrl)} className={`w-7 h-7 rounded-full transition-all active:scale-95 ${activeColor === variant.color ? 'ring-2 ring-offset-2 scale-110 shadow-md' : 'border border-black/10 hover:scale-110 shadow-sm'}`} style={{ backgroundColor: variant.colorCode || '#e2e8f0', ringColor: textColor }} />
+                          <button 
+                            key={idx} 
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClickModal(variant.color, variant.imageUrl); }} 
+                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
+                            style={{ 
+                              backgroundColor: variant.colorCode || '#e2e8f0', 
+                              boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
+                            }} 
+                          />
                         ))}
                     </div>
                   </div>
@@ -265,12 +284,10 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
       <AnimatePresence>
         {isLightboxOpen && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 backdrop-blur-md" onClick={() => setIsLightboxOpen(false)}>
-            {/* Botón Cerrar */}
             <button onClick={() => setIsLightboxOpen(false)} className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50">
               <X className="w-6 h-6" />
             </button>
 
-            {/* Controles de Navegación PC */}
             {allImages.length > 1 && (
               <>
                 <button onClick={(e) => { e.stopPropagation(); setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1)); }} className="hidden sm:flex absolute left-4 sm:left-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50">
@@ -282,7 +299,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
               </>
             )}
 
-            {/* Contenedor de Súper Foto Deslizable */}
             <motion.div 
               key={galleryIndex} 
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} 
@@ -292,7 +308,6 @@ export function ProductCard({ product, store, onAddToCart }: ProductCardProps) {
             >
               <img src={allImages[galleryIndex]} alt="Detalle máximo" className="w-full h-full object-contain max-h-[75vh] rounded-xl shadow-2xl pointer-events-none select-none" draggable="false" />
               
-              {/* Bolitas Indicadoras */}
               {allImages.length > 1 && (
                 <div className="flex gap-2.5 mt-6">
                   {allImages.map((_, idx) => <div key={idx} className={`w-2.5 h-2.5 rounded-full transition-all ${idx === galleryIndex ? 'bg-white scale-125 shadow-md' : 'bg-white/30'}`} />)}
