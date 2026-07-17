@@ -104,35 +104,38 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
           </div>
         </div>
 
-        {/* LISTA DE COLORES (RESTAURADA A SU TAMAÑO ORIGINAL) */}
+        {/* LISTA DE COLORES MODIFICADA PARA TELÉFONOS */}
         <div className="flex-1">
           {colors.length === 0 ? (
              <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50">
                <p className="text-slate-500 font-medium">No hay colores registrados en esta tienda.</p>
              </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            /* Cambio CLAVE aquí: grid-cols-1 en móviles, sm:grid-cols-2 en tablets */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {colors.map((color) => {
-                const hexColor = color.colorCode || '#e2e8f0'; // Aseguramos que siempre haya un color
+                const hexColor = color.colorCode || '#e2e8f0'; 
                 
                 return (
-                <div key={color.id} className="group bg-white border border-slate-200 rounded-2xl p-3 flex items-center gap-3 hover:shadow-md transition-shadow relative overflow-hidden">
+                <div key={color.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:shadow-md transition-shadow">
                   
-                  {/* Círculo de Color */}
-                  <div className="w-10 h-10 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: hexColor }}></div>
-                  
-                  {/* Textos */}
-                  <div className="flex-1 min-w-0 pr-8">
-                    <h4 className="text-sm font-bold text-slate-900 uppercase truncate">{color.name}</h4>
-                    <p className="text-[10px] text-slate-500 font-mono uppercase truncate">{hexColor}</p>
+                  <div className="flex items-center gap-4 flex-1 min-w-0 pr-2">
+                    {/* Círculo de Color */}
+                    <div className="w-12 h-12 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: hexColor }}></div>
+                    
+                    {/* Textos (Ahora sin el truncate que cortaba las palabras) */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-[13px] font-bold text-slate-900 uppercase leading-tight">{color.name}</h4>
+                      <p className="text-[11px] text-slate-500 font-mono uppercase mt-0.5">{hexColor}</p>
+                    </div>
                   </div>
                   
-                  {/* Botones de Acción */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm p-1 rounded-lg">
-                    <button onClick={() => handleEdit(color)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                  {/* Botones de Acción: SIEMPRE VISIBLES Y CON FONDO */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => handleEdit(color)} className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors" title="Editar">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(color.id, color.name)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                    <button onClick={() => handleDelete(color.id, color.name)} className="p-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Eliminar">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
