@@ -22,7 +22,8 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
     setIsEditing(true);
     setEditingId(color.id);
     setName(color.name);
-    setColorCode(color.colorCode || '#000000');
+    // Mantenemos la compatibilidad por si hay colores viejos en BD
+    setColorCode(color.colorCode || (color as any).value || (color as any).hex || '#000000');
   };
 
   // Limpia el formulario y vuelve a "Nuevo Color"
@@ -44,7 +45,7 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
       } else {
         await addColor({ name, colorCode, storeId: activeStore.id });
       }
-      handleCancel(); // Limpiamos al terminar
+      handleCancel(); 
     } catch (error) {
       // El error lo maneja nuestra arquitectura blindada en store.ts
     } finally {
@@ -104,38 +105,36 @@ export function AdminColors({ activeStore, colors, addColor, updateColor, delete
           </div>
         </div>
 
-        {/* LISTA DE COLORES MODIFICADA PARA TELÉFONOS */}
+        {/* LISTA DE COLORES OPTIMIZADA */}
         <div className="flex-1">
           {colors.length === 0 ? (
              <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50">
                <p className="text-slate-500 font-medium">No hay colores registrados en esta tienda.</p>
              </div>
           ) : (
-            /* Cambio CLAVE aquí: grid-cols-1 en móviles, sm:grid-cols-2 en tablets */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            /* SOLUCIÓN: sm:grid-cols-2, lg:grid-cols-2, xl:grid-cols-3 y gap ajustado */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
               {colors.map((color) => {
-                const hexColor = color.colorCode || '#e2e8f0'; 
+                const hexColor = color.colorCode || (color as any).value || (color as any).hex || '#e2e8f0'; 
                 
                 return (
-                <div key={color.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:shadow-md transition-shadow">
+                <div key={color.id} className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-3 hover:shadow-md transition-shadow">
                   
-                  <div className="flex items-center gap-4 flex-1 min-w-0 pr-2">
-                    {/* Círculo de Color */}
-                    <div className="w-12 h-12 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: hexColor }}></div>
-                    
-                    {/* Textos (Ahora sin el truncate que cortaba las palabras) */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-[13px] font-bold text-slate-900 uppercase leading-tight">{color.name}</h4>
-                      <p className="text-[11px] text-slate-500 font-mono uppercase mt-0.5">{hexColor}</p>
-                    </div>
+                  {/* Círculo de Color un poco más compacto */}
+                  <div className="w-10 h-10 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: hexColor }}></div>
+                  
+                  {/* Contenedor de Texto con truncate seguro */}
+                  <div className="flex-1 min-w-0" title={color.name}>
+                    <h4 className="text-sm font-bold text-slate-900 uppercase truncate">{color.name}</h4>
+                    <p className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">{hexColor}</p>
                   </div>
                   
-                  {/* Botones de Acción: SIEMPRE VISIBLES Y CON FONDO */}
+                  {/* Botones de Acción limpios */}
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <button onClick={() => handleEdit(color)} className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors" title="Editar">
+                    <button onClick={() => handleEdit(color)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(color.id, color.name)} className="p-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Eliminar">
+                    <button onClick={() => handleDelete(color.id, color.name)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
