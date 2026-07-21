@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2, Home, LayoutGrid } from 'lucide-react';
 import { ProductCard } from './ProductCard';
-import { Product, Category, Store, Color } from '../types'; // IMPORTANTE: Agregamos Color
+import { Product, Category, Store, Color } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PublicCatalogProps {
   store: Store;
   products: Product[];
   categories: Category[];
-  colors: Color[]; // IMPORTANTE: Recibimos los colores maestros
+  colors: Color[];
 }
 
 interface CartItem {
@@ -179,8 +179,10 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         {isSearchMobileOpen && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="lg:hidden px-4 py-3 sticky top-16 z-30 overflow-hidden shadow-sm" style={{ backgroundColor: cardColor }}>
             <div className="relative">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Search className="h-4 w-4 opacity-50" style={{ color: textColor }} /></div>
-              <input id="mobile-search" type="text" placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none border border-black/10" style={{ backgroundColor: bgColor, color: textColor }} />
+              {/* LUPA GRIS */}
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div>
+              {/* FONDO BLANCO Y LETRAS OSCURAS */}
+              <input id="mobile-search" type="text" placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white text-slate-900 placeholder:text-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none border border-black/10" />
             </div>
           </motion.div>
         )}
@@ -193,8 +195,10 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         </div>
         <div className="flex items-center gap-4 flex-1 max-w-xl mx-8">
           <div className="relative w-full">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Search className="h-4 w-4 opacity-50" style={{ color: textColor }} /></div>
-            <input type="text" placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none border border-black/10 shadow-sm" style={{ backgroundColor: bgColor, color: textColor }} />
+            {/* LUPA GRIS */}
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div>
+            {/* FONDO BLANCO Y LETRAS OSCURAS */}
+            <input type="text" placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white text-slate-900 placeholder:text-slate-400 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none border border-black/10 shadow-sm" />
           </div>
         </div>
       </header>
@@ -254,7 +258,6 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map((product) => (
                         <motion.div key={product.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}>
-                          {/* IMPORTANTE: Pasamos los colores maestros a la tarjeta */}
                           <ProductCard product={product} store={store} colors={colors} onAddToCart={handleAddToCart} />
                         </motion.div>
                       ))}
