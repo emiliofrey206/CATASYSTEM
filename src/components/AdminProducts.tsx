@@ -1,427 +1,371 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Filter, Image as ImageIcon, Loader2, Palette, Tag } from 'lucide-react';
-import { Product, Category, Store, ProductVariant, Color, StockStatus } from '../types';
-import { supabase } from '../supabase';
+import { useState, useMemo } from 'react';
+import { Search, Plus, Edit2, Trash2, X, Image as ImageIcon, Upload, Filter, Tag, Palette } from 'lucide-react';
+import { Product, Store, Category, Color } from '../types';
 
 interface AdminProductsProps {
-  activeStore: Store; 
+  activeStore: Store;
   products: Product[];
   categories: Category[];
-  colors: Color[];
-  addProduct: (p: Omit<Product, 'id' | 'storeId'>) => void;
-  updateProduct: (id: string, p: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  colors: Color[]; // Conexión directa al Muestrario de Colores
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  updateProduct: (id: string, data: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
 }
 
-interface VariantFormItem {
-  id: string;
-  colorId: string;
-  imageUrl: string;
-}
-
-export function AdminProducts({ activeStore, products, categories, colors = [], addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
+export function AdminProducts({ activeStore, products, categories, colors, addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<string>('Todas');
-  
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [variantFiles, setVariantFiles] = useState<Record<string, File>>({});
-  const [isUploading, setIsUploading] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: '',
-    imageUrl: '',
-    stockStatus: 'disponible' as StockStatus,
-    isOffer: false,
-    offerPrice: '',
-    variants: [] as VariantFormItem[]
-  });
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleOpenModal = (product?: Product) => {
-    setImageFile(null);
-    setVariantFiles({});
-    
-    if (product) {
-      setEditingId(product.id);
-      const mappedVariants = product.variants?.map(v => {
-        const matchedColor = colors.find(c => c.name.toLowerCase() === v.color.toLowerCase());
-        return { id: Math.random().toString(), colorId: matchedColor ? matchedColor.id : '', imageUrl: v.imageUrl };
-      }) || [];
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
 
-      // Lógica de compatibilidad si el producto era viejo y usaba inStock
-      let currentStock: StockStatus = product.stockStatus;
-      if (!currentStock) {
-        currentStock = product.inStock === false ? 'agotado' : 'disponible';
-      }
+  // Estados del Formulario
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [stockStatus, setStockStatus] = useState('disponible');
+  const [isOffer, setIsOffer] = useState(false);
+  const [offerPrice, setOfferPrice] = useState('');
+  const [variants, setVariants] = useState<{ color: string; colorCode: string; imageUrl: string }[]>([]);
 
-      setFormData({
-        name: product.name,
-        description: product.description,
-        price: product.price.toString(),
-        category: product.category,
-        imageUrl: product.imageUrl || '',
-        stockStatus: currentStock,
-        isOffer: product.isOffer || false,
-        offerPrice: product.offerPrice ? product.offerPrice.toString() : '',
-        variants: mappedVariants
-      });
-    } else {
-      setEditingId(null);
-      setFormData({
-        name: '', description: '', price: '', category: categories[0]?.name || '',
-        imageUrl: '', stockStatus: 'disponible', isOffer: false, offerPrice: '', variants: []
-      });
-    }
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchCat = filterCategory ? p.category === filterCategory : true;
+      return matchSearch && matchCat;
+    });
+  }, [products, searchQuery, filterCategory]);
+
+  const resetForm = () => {
+    setIsEditing(false);
+    setEditingId(null);
+    setName('');
+    setPrice('');
+    setCategoryId(categories.length > 0 ? categories[0].name : '');
+    setDescription('');
+    setImageUrl('');
+    setStockStatus('disponible');
+    setIsOffer(false);
+    setOfferPrice('');
+    setVariants([]);
+  };
+
+  const openNewModal = () => {
+    resetForm();
     setIsModalOpen(true);
   };
 
-  const handleMainImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setImageFile(file); setFormData({ ...formData, imageUrl: URL.createObjectURL(file) }); }
-  };
-
-  const addVariant = () => setFormData({ ...formData, variants: [...formData.variants, { id: Math.random().toString(), colorId: colors[0]?.id || '', imageUrl: '' }] });
-  const removeVariant = (idToRemove: string) => { setFormData({ ...formData, variants: formData.variants.filter(v => v.id !== idToRemove) }); const newVariantFiles = { ...variantFiles }; delete newVariantFiles[idToRemove]; setVariantFiles(newVariantFiles); };
-  const updateVariantColorId = (id: string, colorId: string) => setFormData({ ...formData, variants: formData.variants.map(v => v.id === id ? { ...v, colorId } : v) });
-  
-  const handleVariantImageUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setVariantFiles(prev => ({ ...prev, [id]: file })); setFormData({ ...formData, variants: formData.variants.map(v => v.id === id ? { ...v, imageUrl: URL.createObjectURL(file) } : v) }); }
-  };
-
-  const uploadFileToSupabase = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `prod-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `${activeStore.id}/${fileName}`;
-    const { error: uploadError } = await supabase.storage.from('productos').upload(filePath, file);
-    if (uploadError) throw uploadError;
-    const { data } = supabase.storage.from('productos').getPublicUrl(filePath);
-    return data.publicUrl;
+  const openEditModal = (product: Product) => {
+    setIsEditing(true);
+    setEditingId(product.id);
+    setName(product.name);
+    setPrice(product.price.toString());
+    setCategoryId(product.category);
+    setDescription(product.description || '');
+    setImageUrl(product.imageUrl || '');
+    setStockStatus(product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible'));
+    setIsOffer(product.isOffer || false);
+    setOfferPrice(product.offerPrice ? product.offerPrice.toString() : '');
+    setVariants(product.variants || []);
+    setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsUploading(true);
-
+    setIsSaving(true);
     try {
-      const finalVariants: ProductVariant[] = [];
-      for (const variant of formData.variants) {
-        const matchedColorObj = colors.find(c => c.id === variant.colorId);
-        if (!matchedColorObj) continue;
-        let vImageUrl = variant.imageUrl;
-        if (variantFiles[variant.id]) vImageUrl = await uploadFileToSupabase(variantFiles[variant.id]);
-        finalVariants.push({ color: matchedColorObj.name, colorCode: matchedColorObj.hexCode, imageUrl: vImageUrl });
-      }
-
-      let finalMainImageUrl = formData.imageUrl;
-      if (imageFile) finalMainImageUrl = await uploadFileToSupabase(imageFile);
-      else if (!finalMainImageUrl && finalVariants.length > 0) finalMainImageUrl = finalVariants[0].imageUrl;
-
       const productData = {
-        name: formData.name,
-        description: formData.description,
-        price: parseFloat(formData.price) || 0,
-        category: formData.category,
-        imageUrl: finalMainImageUrl,
-        stockStatus: formData.stockStatus,
-        isOffer: formData.isOffer,
-        offerPrice: formData.isOffer && formData.offerPrice ? parseFloat(formData.offerPrice) : undefined,
-        variants: finalVariants.length > 0 ? finalVariants : undefined
+        storeId: activeStore.id,
+        name,
+        price: parseFloat(price) || 0,
+        category: categoryId,
+        description,
+        imageUrl,
+        stockStatus,
+        inStock: stockStatus !== 'agotado',
+        isOffer,
+        offerPrice: isOffer ? parseFloat(offerPrice) || 0 : null,
+        variants
       };
 
-      if (editingId) updateProduct(editingId, productData);
-      else addProduct(productData);
-      
-      setIsModalOpen(false); setImageFile(null); setVariantFiles({});
-    } catch (error: any) { alert(`Error guardando el producto: ${error.message}`); } 
-    finally { setIsUploading(false); }
-  };
-
-  const filteredProducts = selectedFilter === 'Todas' ? products : products.filter(product => product.category === selectedFilter);
-
-  // Helper para pintar las etiquetas de stock en la tabla
-  const getStockBadge = (status: string) => {
-    switch (status) {
-      case 'disponible': return <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Disponible</span>;
-      case 'pocas_unidades': return <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Pocas Unid.</span>;
-      case 'agotado': return <span className="bg-red-100 text-red-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Agotado</span>;
-      default: return <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Disponible</span>;
+      if (isEditing && editingId) {
+        await updateProduct(editingId, productData);
+      } else {
+        await addProduct(productData);
+      }
+      setIsModalOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  if (!activeStore) return null;
+  // Convertidor de Imagen a Base64 para subir foto local
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleVariantImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newVariants = [...variants];
+        newVariants[index].imageUrl = reader.result as string;
+        setVariants(newVariants);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addVariant = () => setVariants([...variants, { color: '', colorCode: '#000000', imageUrl: '' }]);
+  const removeVariant = (idx: number) => setVariants(variants.filter((_, i) => i !== idx));
+  
+  const updateVariant = (idx: number, field: string, value: string) => {
+    const newVariants = [...variants];
+    (newVariants[idx] as any)[field] = value;
+    
+    // Auto-completado inteligente del color maestro
+    if (field === 'color') {
+       const foundMaster = colors.find(c => c.name.trim().toLowerCase() === value.trim().toLowerCase());
+       if (foundMaster) {
+          newVariants[idx].colorCode = foundMaster.colorCode || (foundMaster as any).value || (foundMaster as any).hex || '#000000';
+       }
+    }
+    
+    setVariants(newVariants);
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-[2rem] p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 uppercase">Inventario de {activeStore.name}</h2>
-          <p className="text-sm text-slate-500 mt-1 hidden sm:block">Gestiona productos, ofertas y existencias.</p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-auto flex items-center">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Filter className="h-4 w-4 text-slate-400" /></div>
-            <select value={selectedFilter} onChange={(e) => setSelectedFilter(e.target.value)} className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 rounded-xl pl-9 pr-8 py-2.5 outline-none appearance-none cursor-pointer">
-              <option value="Todas">Todas las categorías</option>
-              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-            </select>
+       {/* HEADER Y BUSCADOR */}
+       <div className="mb-6 flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+             <h2 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tight">Inventario de {activeStore.name}</h2>
+             <button onClick={openNewModal} className="bg-black hover:bg-slate-800 text-white px-5 py-3 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+               <Plus className="w-5 h-5" /> Nuevo Producto
+             </button>
           </div>
-          <button onClick={() => handleOpenModal()} className="w-full sm:w-auto bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
-            <Plus className="w-4 h-4" /> Nuevo Producto
-          </button>
-        </div>
-      </div>
 
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
-              <th className="font-semibold pb-3 pl-2">Producto</th>
-              <th className="font-semibold pb-3">Categoría</th>
-              <th className="font-semibold pb-3">Estado</th>
-              <th className="font-semibold pb-3">Precio</th>
-              <th className="font-semibold pb-3 text-right pr-2">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredProducts.map((product) => {
-              const actualStock = product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible');
-              return (
-              <tr key={product.id} className="hover:bg-slate-50 transition-colors">
-                <td className="py-4 pl-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+          <div className="flex flex-col sm:flex-row gap-3">
+             <div className="relative flex-1">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Buscar productos..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+             </div>
+             <div className="relative sm:w-64">
+                <Filter className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                  <option value="">Todas las categorías</option>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+             </div>
+          </div>
+       </div>
+
+       {/* LISTA DE PRODUCTOS */}
+       <div className="space-y-3">
+          {filteredProducts.length === 0 ? (
+             <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50">
+                <p className="text-slate-500 font-medium">No se encontraron productos.</p>
+             </div>
+          ) : (
+             filteredProducts.map(product => (
+                <div key={product.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 hover:shadow-md transition-all">
+                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 border border-slate-100 bg-slate-50 flex items-center justify-center">
                       {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
-                    </div>
-                    <div>
-                      <p className="font-bold text-base text-slate-900 flex items-center gap-2">
-                        {product.name} {product.isOffer && <Tag className="w-3.5 h-3.5 text-red-500" />}
-                      </p>
+                   </div>
+                   
+                   <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 uppercase truncate">{product.name}</h3>
+                      <p className="text-[10px] sm:text-xs text-slate-500 uppercase mt-0.5">{product.category}</p>
+                      
+                      {/* --- SOLUCIÓN: CÍRCULOS INTELIGENTES CONECTADOS AL MUESTRARIO --- */}
                       {product.variants && product.variants.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1.5">
-                          {product.variants.map((v, i) => <div key={i} title={v.color} className="w-3 h-3 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: v.colorCode }} />)}
-                        </div>
+                         <div className="flex items-center gap-1.5 mt-2">
+                            {product.variants.map((variant, idx) => {
+                              const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
+                              const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
+
+                              return (
+                                <div 
+                                  key={idx} 
+                                  title={variant.color}
+                                  className="w-4 h-4 rounded-full border border-slate-200 shadow-sm" 
+                                  style={{ backgroundColor: hexColor }}
+                                ></div>
+                              );
+                            })}
+                         </div>
                       )}
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 text-sm text-slate-600">{product.category}</td>
-                <td className="py-4">{getStockBadge(actualStock)}</td>
-                <td className="py-4">
-                  {product.isOffer && product.offerPrice ? (
-                    <div className="flex flex-col">
-                      <span className="text-xs text-slate-400 line-through">${product.price.toFixed(2)}</span>
-                      <span className="font-bold text-base text-red-600">${product.offerPrice.toFixed(2)}</span>
-                    </div>
-                  ) : (
-                    <span className="font-semibold text-base text-slate-900">${product.price.toFixed(2)}</span>
-                  )}
-                </td>
-                <td className="py-4 pr-2 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => handleOpenModal(product)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => { if(confirm('¿Eliminar producto?')) deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </td>
-              </tr>
-            )})}
-          </tbody>
-        </table>
-      </div>
 
-      {/* VISTA TARJETAS MÓVIL */}
-      <div className="md:hidden flex flex-col gap-3">
-        {filteredProducts.map((product) => {
-          const actualStock = product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible');
-          return (
-          <div key={product.id} className="bg-white border border-slate-100 rounded-2xl p-3 flex gap-4 items-center shadow-sm">
-            <div className="w-20 h-20 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100 relative">
-               {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
-               {product.isOffer && <div className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Tag className="w-3 h-3" /></div>}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-slate-900 text-sm truncate">{product.name}</h3>
-              <p className="text-xs text-slate-500 truncate mt-0.5 mb-1.5">{product.category}</p>
-              {getStockBadge(actualStock)}
-              
-              <div className="flex items-center gap-2 mt-2">
-                {product.isOffer && product.offerPrice ? (
-                  <>
-                    <span className="font-black text-red-600 text-sm">${product.offerPrice.toFixed(2)}</span>
-                    <span className="text-xs text-slate-400 line-through">${product.price.toFixed(2)}</span>
-                  </>
-                ) : (
-                  <span className="font-black text-slate-900 text-sm">${product.price.toFixed(2)}</span>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1 shrink-0 border-l border-slate-100 pl-3">
-              <button onClick={() => handleOpenModal(product)} className="p-2 text-slate-400 hover:text-blue-600"><Pencil className="w-4 h-4" /></button>
-              <button onClick={() => { if(confirm('¿Eliminar?')) deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          </div>
-        )})}
-      </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
-              <h3 className="text-xl font-bold text-slate-900">{editingId ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} disabled={isUploading} className="p-2 text-slate-400 hover:text-slate-900 rounded-full"><X className="w-5 h-5" /></button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto space-y-6">
-              
-              {/* --- DATOS PRINCIPALES --- */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">Datos Principales</h4>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nombre</label>
-                  <input required type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-black/5" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Precio Base ($)</label>
-                    <input required type="number" step="0.01" min="0" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-black/5" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Categoría</label>
-                    <select required value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-black/5">
-                      <option value="" disabled>Selecciona...</option>
-                      {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Descripción</label>
-                  <textarea required rows={2} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-black/5 resize-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Imagen de Portada</label>
-                  <div className="flex flex-col gap-3">
-                    <label className={`cursor-pointer bg-white border border-slate-200 border-dashed rounded-xl px-4 py-3 text-center transition-colors ${isUploading ? 'opacity-50' : 'hover:bg-slate-50'}`}>
-                      <span className="text-sm font-medium text-blue-600">Subir foto local</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleMainImageUpload} disabled={isUploading} />
-                    </label>
-                    {formData.imageUrl && (
-                      <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
-                        <img src={formData.imageUrl} alt="Portada" className="w-full h-full object-cover" />
+                      <div className="flex items-center gap-3 mt-2 sm:hidden">
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${product.stockStatus === 'agotado' || product.inStock === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                           {product.stockStatus === 'agotado' || product.inStock === false ? 'Agotado' : 'Disponible'}
+                        </span>
+                        <span className="text-sm font-black">${product.price.toFixed(2)}</span>
                       </div>
-                    )}
-                  </div>
+                   </div>
+
+                   <div className="hidden sm:flex items-center gap-4">
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase ${product.stockStatus === 'agotado' || product.inStock === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                         {product.stockStatus === 'agotado' || product.inStock === false ? 'Agotado' : 'Disponible'}
+                      </span>
+                      <span className="text-base font-black w-20 text-right">${product.price.toFixed(2)}</span>
+                   </div>
+
+                   <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0 border-l border-slate-100 pl-4">
+                      <button onClick={() => openEditModal(product)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => { if(window.confirm(`¿Eliminar ${product.name}?`)) deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                   </div>
                 </div>
-              </div>
+             ))
+          )}
+       </div>
 
-              {/* --- GESTIÓN COMERCIAL Y STOCK (NUEVO) --- */}
-              <div className="space-y-4 pt-4 border-t border-slate-100 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Tag className="w-4 h-4 text-blue-600" /> Inventario y Ofertas</h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Selector de Estado */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Disponibilidad</label>
-                    <select 
-                      value={formData.stockStatus} 
-                      onChange={(e) => setFormData({...formData, stockStatus: e.target.value as StockStatus})} 
-                      disabled={isUploading} 
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none"
-                    >
-                      <option value="disponible">🟢 Disponible (En Stock)</option>
-                      <option value="pocas_unidades">🟠 Pocas Unidades (Últimos)</option>
-                      <option value="agotado">🔴 Agotado (Sin Stock)</option>
-                    </select>
-                  </div>
+       {/* MODAL DE EDICIÓN / CREACIÓN */}
+       {isModalOpen && (
+         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+               <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
+                  <h3 className="text-xl font-black text-slate-900">{isEditing ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+               </div>
 
-                  {/* Toggle de Oferta */}
-                  <div className="flex flex-col justify-center gap-2">
-                    <label className="flex items-center gap-3 cursor-pointer mt-2 md:mt-5">
-                      <input type="checkbox" checked={formData.isOffer} onChange={(e) => setFormData({...formData, isOffer: e.target.checked})} disabled={isUploading} className="w-5 h-5 rounded border-slate-300 text-red-500 focus:ring-red-500 accent-red-500" />
-                      <span className="text-sm font-bold text-slate-700">Producto en Oferta/Remate</span>
-                    </label>
-                  </div>
-                </div>
+               <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                  <form id="productForm" onSubmit={handleSubmit} className="space-y-6">
+                     
+                     <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Nombre del Producto</label>
+                        <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. Horquilla Francesa" />
+                     </div>
 
-                {/* Input Precio de Oferta (Se muestra solo si isOffer es true) */}
-                {formData.isOffer && (
-                  <div className="pt-2">
-                    <label className="block text-xs font-bold text-red-600 uppercase mb-1">Precio de Oferta ($)</label>
-                    <input 
-                      required 
-                      type="number" step="0.01" min="0" 
-                      placeholder="Escribe el precio rebajado..."
-                      value={formData.offerPrice} 
-                      onChange={(e) => setFormData({...formData, offerPrice: e.target.value})} 
-                      disabled={isUploading} 
-                      className="w-full bg-white border-2 border-red-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-red-500 font-bold text-red-600" 
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* --- VARIANTES --- */}
-              <div className="space-y-4 pt-4 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Palette className="w-4 h-4 text-blue-600" /> Variantes por Color</h4>
-                  {colors.length > 0 ? (
-                    <button type="button" onClick={addVariant} disabled={isUploading} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">+ Asignar Color</button>
-                  ) : (
-                    <span className="text-xs text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded-lg">Registra colores en el menú</span>
-                  )}
-                </div>
-
-                {formData.variants.length > 0 && (
-                  <div className="space-y-3">
-                    {formData.variants.map((variant) => {
-                      const currentSelectedColor = colors.find(c => c.id === variant.colorId);
-                      return (
-                        <div key={variant.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row gap-4 relative items-center">
-                          <div className="w-full sm:w-1/2">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Color</label>
-                            <div className="flex gap-2 items-center">
-                              <div className="w-6 h-6 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: currentSelectedColor?.hexCode || '#ccc' }} />
-                              <select value={variant.colorId} onChange={(e) => updateVariantColorId(variant.id, e.target.value)} disabled={isUploading} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
-                                {colors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          <div className="flex-1 flex items-center gap-3 w-full">
-                            <div className="flex-1">
-                               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Foto de variante</label>
-                               <label className="cursor-pointer bg-white border border-slate-200 rounded-lg px-3 py-2 text-center text-xs font-bold text-slate-700 block w-full">
-                                  Subir Foto
-                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleVariantImageUpload(variant.id, e)} disabled={isUploading} required={!formData.imageUrl && formData.variants[0]?.id === variant.id} />
-                               </label>
-                            </div>
-                            {variant.imageUrl && (
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-white shrink-0">
-                                <img src={variant.imageUrl} alt="Variante" className="w-full h-full object-cover" />
-                              </div>
-                            )}
-                          </div>
-                          <button type="button" onClick={() => removeVariant(variant.id)} disabled={isUploading} className="absolute -top-2 -right-2 bg-white border border-slate-200 text-slate-400 p-1.5 rounded-full hover:text-red-600"><X className="w-3 h-3" /></button>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                           <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Precio Base ($)</label>
+                           <input type="number" step="0.01" required value={price} onChange={e => setPrice(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                        <div>
+                           <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Categoría</label>
+                           <select required value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                             {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                           </select>
+                        </div>
+                     </div>
 
+                     <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Descripción</label>
+                        <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Detalles del producto..." />
+                     </div>
+
+                     {/* SUBIR FOTO LOCAL */}
+                     <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Imagen de Portada</label>
+                        <div className="border border-slate-200 rounded-xl p-4">
+                           <label className="flex items-center justify-center gap-2 text-sm font-semibold text-blue-600 cursor-pointer hover:bg-blue-50 py-3 rounded-lg border border-dashed border-blue-200 transition-colors">
+                             <Upload className="w-4 h-4" /> Subir foto local
+                             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                           </label>
+                           {imageUrl && (
+                             <div className="mt-4 relative inline-block">
+                                <img src={imageUrl} alt="Preview" className="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-sm" />
+                                <button type="button" onClick={() => setImageUrl('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"><X className="w-3 h-3" /></button>
+                             </div>
+                           )}
+                        </div>
+                     </div>
+
+                     {/* INVENTARIO Y OFERTAS */}
+                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
+                        <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4"><Tag className="w-4 h-4 text-blue-500" /> Inventario y Ofertas</h4>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                           <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Disponibilidad</label>
+                              <select value={stockStatus} onChange={e => setStockStatus(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="disponible">🟢 Disponible (En Stock)</option>
+                                <option value="pocas_unidades">🟠 Pocas Unidades</option>
+                                <option value="agotado">🔴 Agotado</option>
+                              </select>
+                           </div>
+                           <div className="flex items-center h-[46px] px-2">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                 <input type="checkbox" checked={isOffer} onChange={e => setIsOffer(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                                 <span className="text-sm font-bold text-slate-700">Producto en Oferta/Remate</span>
+                              </label>
+                           </div>
+                        </div>
+                        
+                        {isOffer && (
+                           <div className="mt-4">
+                              <label className="block text-xs font-bold text-slate-700 uppercase mb-2 text-blue-600">Precio de Oferta ($)</label>
+                              <input type="number" step="0.01" required value={offerPrice} onChange={e => setOfferPrice(e.target.value)} className="w-full sm:w-1/2 border border-blue-200 bg-blue-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                           </div>
+                        )}
+                     </div>
+
+                     {/* VARIANTES POR COLOR */}
+                     <div className="border border-slate-200 rounded-xl overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-3 flex items-center justify-between border-b border-slate-200">
+                           <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Palette className="w-4 h-4 text-blue-500" /> Variantes por Color</h4>
+                           <button type="button" onClick={addVariant} className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                             <Plus className="w-3 h-3" /> Asignar Color
+                           </button>
+                        </div>
+                        
+                        <div className="p-4 space-y-4">
+                           {variants.length === 0 ? (
+                              <p className="text-xs text-slate-500 text-center py-2">No hay colores asignados. El producto es único.</p>
+                           ) : (
+                              variants.map((v, idx) => (
+                                 <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-white border border-slate-100 rounded-xl p-3 shadow-sm relative pr-10">
+                                    <div className="flex-1 w-full">
+                                       <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Color / Tono</label>
+                                       <input type="text" value={v.color} onChange={e => updateVariant(idx, 'color', e.target.value)} placeholder="Ej. Dorado, Rojo..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    </div>
+                                    
+                                    <div className="shrink-0">
+                                       <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Foto Variante</label>
+                                       <div className="flex items-center gap-2">
+                                          <label className="w-9 h-9 flex items-center justify-center bg-slate-50 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                                             <Upload className="w-4 h-4 text-slate-400" />
+                                             <input type="file" accept="image/*" onChange={(e) => handleVariantImageChange(idx, e)} className="hidden" />
+                                          </label>
+                                          {v.imageUrl && <img src={v.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-200" />}
+                                       </div>
+                                    </div>
+
+                                    <button type="button" onClick={() => removeVariant(idx)} className="absolute top-1/2 -translate-y-1/2 right-3 text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+                                 </div>
+                              ))
+                           )}
+                        </div>
+                     </div>
+
+                  </form>
+               </div>
+               
+               <div className="p-6 border-t border-slate-100 shrink-0 flex items-center justify-end gap-3 bg-slate-50">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                  <button type="submit" form="productForm" disabled={isSaving} className="px-6 py-2.5 text-sm font-bold text-white bg-black hover:bg-slate-800 rounded-xl transition-colors shadow-sm disabled:opacity-50">
+                    {isSaving ? 'Guardando...' : 'Guardar Producto'}
+                  </button>
+               </div>
             </div>
-            
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={() => setIsModalOpen(false)} disabled={isUploading} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancelar</button>
-              <button type="submit" disabled={isUploading} className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 inline-flex items-center justify-center min-w-[140px]">
-                {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</> : 'Guardar Producto'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+         </div>
+       )}
     </div>
   );
 }
