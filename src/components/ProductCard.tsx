@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ShoppingCart, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
-import { Product, Store, Color } from '../types'; // IMPORTANTE: Agregamos Color
+import { Product, Store, Color } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
   store: Store; 
-  colors: Color[]; // IMPORTANTE: Recibimos colores
+  colors: Color[]; 
   onAddToCart?: (product: Product, color: string | null) => void;
 }
 
@@ -21,13 +21,14 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   const bOfferBg = store.badgeOfferColor || '#2563eb'; const bOfferText = store.badgeOfferTextColor || '#ffffff';
 
   const firstVariantImg = product.variants && product.variants.length > 0 ? product.variants[0].imageUrl : '';
-  const firstVariantColor = product.variants && product.variants.length > 0 ? product.variants[0].color : null;
   
-  const defaultColor = firstVariantColor;
-  const defaultImage = (defaultColor && firstVariantImg) ? firstVariantImg : product.imageUrl;
+  // SOLUCIÓN DE LA PORTADA:
+  // Forzamos a que la imagen por defecto sea SIEMPRE la portada del producto (imageUrl)
+  const defaultImage = product.imageUrl || firstVariantImg;
 
   const [activeImage, setActiveImage] = useState(defaultImage);
-  const [activeColor, setActiveColor] = useState<string | null>(defaultColor);
+  // Comenzamos en 'null' para que no haya color seleccionado al inicio y se muestre la foto grupal
+  const [activeColor, setActiveColor] = useState<string | null>(null);
 
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);   
@@ -137,7 +138,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
             <div className="mt-4 pt-4 border-t border-black/5">
               <div className="flex flex-wrap gap-3">
                 {product.variants.map((variant, idx) => {
-                  // LA MAGIA DE LA ARQUITECTURA: Buscamos el color maestro para asegurar 100% de actualización
                   const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
                   const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
 
