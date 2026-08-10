@@ -62,4 +62,5 @@ export interface Category {
   description?: string;
   imageUrl?: string;
   parentId?: string | null; // Si es null, es categoría principal
+ order?: number;
 }
