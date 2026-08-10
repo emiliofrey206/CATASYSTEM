@@ -4,6 +4,17 @@ import { ProductCard } from './ProductCard';
 import { Product, Category, Store, Color } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
+// --- INTELIGENCIA MATEMÁTICA DE CONTRASTE ---
+// Analiza un color Hex y devuelve blanco (#ffffff) o oscuro (#0f172a) para máxima legibilidad
+function getContrastColor(hexColor: string) {
+  const hex = hexColor?.replace('#', '') || 'ffffff';
+  const r = parseInt(hex.substr(0, 2), 16) || 255;
+  const g = parseInt(hex.substr(2, 2), 16) || 255;
+  const b = parseInt(hex.substr(4, 2), 16) || 255;
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return yiq >= 128 ? '#0f172a' : '#ffffff';
+}
+
 interface PublicCatalogProps {
   store: Store;
   products: Product[];
@@ -29,6 +40,9 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
   const checkoutBtnTextColor = store.checkoutBtnTextColor || '#ffffff';
   const cartItemBgColor = store.cartItemBgColor || '#ffffff';
 
+  // Obtenemos el color ideal de alto contraste basado en el fondo principal (bgColor)
+  const contrastBgColor = getContrastColor(bgColor);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Inicio');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -40,6 +54,11 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
   const [toastMessage, setToastMessage] = useState<{ id: number, text: string } | null>(null);
 
   const uiState = useRef({ category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen });
+
+  // ORDENAMOS LAS CATEGORÍAS SEGÚN LO QUE CONFIGURASTE EN EL PANEL
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [categories]);
 
   useEffect(() => { uiState.current = { category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen }; }, [selectedCategory, isMobileFiltersOpen, isSearchMobileOpen, isCartOpen]);
 
@@ -155,7 +174,8 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         <LayoutGrid className="w-4 h-4" /> Todos los productos
       </button>
       <div className="pt-2 pb-1"><p className="text-[10px] uppercase font-bold tracking-widest opacity-50 px-3" style={{ color: textColor }}>Explorar</p></div>
-      {categories.map((cat) => (
+      {/* SE USA LA LISTA ORDENADA AQUI */}
+      {sortedCategories.map((cat) => (
         <button key={cat.id} onClick={() => handleSelectCategory(cat.name)} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors border border-transparent" style={{ backgroundColor: selectedCategory === cat.name ? `${accentColor}20` : 'transparent', color: selectedCategory === cat.name ? accentColor : textColor, borderColor: selectedCategory === cat.name ? accentColor : 'transparent' }}>{cat.name}</button>
       ))}
     </nav>
@@ -179,9 +199,7 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         {isSearchMobileOpen && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="lg:hidden px-4 py-3 sticky top-16 z-30 overflow-hidden shadow-sm" style={{ backgroundColor: cardColor }}>
             <div className="relative">
-              {/* LUPA GRIS */}
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div>
-              {/* FONDO BLANCO Y LETRAS OSCURAS */}
               <input id="mobile-search" type="text" placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white text-slate-900 placeholder:text-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none border border-black/10" />
             </div>
           </motion.div>
@@ -195,9 +213,7 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         </div>
         <div className="flex items-center gap-4 flex-1 max-w-xl mx-8">
           <div className="relative w-full">
-            {/* LUPA GRIS */}
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div>
-            {/* FONDO BLANCO Y LETRAS OSCURAS */}
             <input type="text" placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white text-slate-900 placeholder:text-slate-400 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none border border-black/10 shadow-sm" />
           </div>
         </div>
@@ -226,7 +242,8 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-5">
-                  {categories.map(cat => (
+                  {/* SE USA LA LISTA ORDENADA AQUI TAMBIEN */}
+                  {sortedCategories.map(cat => (
                     <button key={cat.id} onClick={() => handleSelectCategory(cat.name)} className="relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden group shadow-sm border border-black/5 block w-full transition-transform active:scale-95" style={{ backgroundColor: cardColor }}>
                       {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><ImageIcon className="w-8 h-8" style={{ color: textColor }} /></div>}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3 sm:p-5 text-left"><h3 className="text-white font-bold text-sm sm:text-lg leading-tight drop-shadow-md">{cat.name}</h3></div>
@@ -276,8 +293,9 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         </div>
       </main>
 
-      <footer className="w-full text-center py-8 mt-auto px-4 opacity-50 hover:opacity-100 transition-opacity duration-300">
-        <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: textColor }}>
+      {/* --- FIRMA DEL DESARROLLADOR CON INTELIGENCIA DE CONTRASTE --- */}
+      <footer className="w-full text-center py-8 mt-auto px-4 opacity-80 hover:opacity-100 transition-opacity duration-300">
+        <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: contrastBgColor }}>
           CataSystem Desarrollado por ING. EMILIO FREY, 2026
         </p>
       </footer>
@@ -372,9 +390,10 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
                           <div className="flex items-center justify-between mt-2">
                             <p className="text-sm font-black" style={{ color: textColor }}>${price.toFixed(2)}</p>
                             <div className="flex items-center gap-1.5 rounded-lg p-0.5 border border-black/10" style={{ backgroundColor: cardColor }}>
-                              <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Minus className="w-3 h-3" /></button>
+                              {/* --- BOTONES DEL CARRITO CON INTELIGENCIA DE CONTRASTE --- */}
+                              <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-90 transition-transform active:scale-95" style={{ backgroundColor: bgColor, color: contrastBgColor }}><Minus className="w-3 h-3" /></button>
                               <span className="text-xs font-bold w-4 text-center" style={{ color: textColor }}>{item.quantity}</span>
-                              <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-80" style={{ backgroundColor: bgColor, color: textColor }}><Plus className="w-3 h-3" /></button>
+                              <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-90 transition-transform active:scale-95" style={{ backgroundColor: bgColor, color: contrastBgColor }}><Plus className="w-3 h-3" /></button>
                             </div>
                           </div>
                         </div>
