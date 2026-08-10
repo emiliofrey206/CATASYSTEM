@@ -17,6 +17,7 @@ interface VariantFormItem {
   id: string;
   colorId: string;
   imageUrl: string;
+  stockStatus: string; // <-- NUEVO: Control de stock individual
 }
 
 export function AdminProducts({ activeStore, products, categories, colors = [], addProduct, updateProduct, deleteProduct }: AdminProductsProps) {
@@ -34,7 +35,7 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
     price: '',
     category: '',
     imageUrl: '',
-    stockStatus: 'disponible' as StockStatus,
+    stockStatus: 'disponible' as StockStatus, // Stock general del producto
     isOffer: false,
     offerPrice: '',
     variants: [] as VariantFormItem[]
@@ -48,10 +49,14 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
       setEditingId(product.id);
       const mappedVariants = product.variants?.map(v => {
         const matchedColor = colors.find(c => c.name.toLowerCase() === v.color.toLowerCase());
-        return { id: Math.random().toString(), colorId: matchedColor ? matchedColor.id : '', imageUrl: v.imageUrl };
+        return { 
+          id: Math.random().toString(), 
+          colorId: matchedColor ? matchedColor.id : '', 
+          imageUrl: v.imageUrl || '',
+          stockStatus: (v as any).stockStatus || 'disponible' // Recuperamos el stock de la variante
+        };
       }) || [];
 
-      // Lógica de compatibilidad si el producto era viejo y usaba inStock
       let currentStock: StockStatus = product.stockStatus;
       if (!currentStock) {
         currentStock = product.inStock === false ? 'agotado' : 'disponible';
@@ -83,13 +88,16 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
     if (file) { setImageFile(file); setFormData({ ...formData, imageUrl: URL.createObjectURL(file) }); }
   };
 
-  const addVariant = () => setFormData({ ...formData, variants: [...formData.variants, { id: Math.random().toString(), colorId: colors[0]?.id || '', imageUrl: '' }] });
+  const addVariant = () => setFormData({ ...formData, variants: [...formData.variants, { id: Math.random().toString(), colorId: colors[0]?.id || '', imageUrl: '', stockStatus: 'disponible' }] });
   const removeVariant = (idToRemove: string) => { setFormData({ ...formData, variants: formData.variants.filter(v => v.id !== idToRemove) }); const newVariantFiles = { ...variantFiles }; delete newVariantFiles[idToRemove]; setVariantFiles(newVariantFiles); };
-  const updateVariantColorId = (id: string, colorId: string) => setFormData({ ...formData, variants: formData.variants.map(v => v.id === id ? { ...v, colorId } : v) });
+  
+  const updateVariantField = (id: string, field: keyof VariantFormItem, value: string) => {
+    setFormData({ ...formData, variants: formData.variants.map(v => v.id === id ? { ...v, [field]: value } : v) });
+  };
   
   const handleVariantImageUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) { setVariantFiles(prev => ({ ...prev, [id]: file })); setFormData({ ...formData, variants: formData.variants.map(v => v.id === id ? { ...v, imageUrl: URL.createObjectURL(file) } : v) }); }
+    if (file) { setVariantFiles(prev => ({ ...prev, [id]: file })); updateVariantField(id, 'imageUrl', URL.createObjectURL(file)); }
   };
 
   const uploadFileToSupabase = async (file: File): Promise<string> => {
@@ -107,14 +115,19 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
     setIsUploading(true);
 
     try {
-      const finalVariants: ProductVariant[] = [];
+      const finalVariants: any[] = [];
       for (const variant of formData.variants) {
         const matchedColorObj = colors.find(c => c.id === variant.colorId);
         if (!matchedColorObj) continue;
         let vImageUrl = variant.imageUrl;
         if (variantFiles[variant.id]) vImageUrl = await uploadFileToSupabase(variantFiles[variant.id]);
-        // Guardamos el hexCode original como colorCode del variant
-        finalVariants.push({ color: matchedColorObj.name, colorCode: (matchedColorObj as any).hexCode || (matchedColorObj as any).colorCode, imageUrl: vImageUrl });
+        
+        finalVariants.push({ 
+          color: matchedColorObj.name, 
+          colorCode: (matchedColorObj as any).hexCode || (matchedColorObj as any).colorCode, 
+          imageUrl: vImageUrl,
+          stockStatus: variant.stockStatus // <-- Guardamos el estado del color individual
+        });
       }
 
       let finalMainImageUrl = formData.imageUrl;
@@ -143,7 +156,6 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
 
   const filteredProducts = selectedFilter === 'Todas' ? products : products.filter(product => product.category === selectedFilter);
 
-  // Helper para pintar las etiquetas de stock en la tabla
   const getStockBadge = (status: string) => {
     switch (status) {
       case 'disponible': return <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Disponible</span>;
@@ -183,7 +195,7 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
             <tr className="border-b border-slate-200 text-slate-500">
               <th className="font-semibold pb-3 pl-2">Producto</th>
               <th className="font-semibold pb-3">Categoría</th>
-              <th className="font-semibold pb-3">Estado</th>
+              <th className="font-semibold pb-3">Estado Gral.</th>
               <th className="font-semibold pb-3">Precio</th>
               <th className="font-semibold pb-3 text-right pr-2">Acciones</th>
             </tr>
@@ -202,20 +214,20 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
                       <p className="font-bold text-base text-slate-900 flex items-center gap-2">
                         {product.name} {product.isOffer && <Tag className="w-3.5 h-3.5 text-red-500" />}
                       </p>
-                      
-                      {/* --- SOLUCIÓN: Círculos inteligentes conectados al Muestrario de Colores (Escritorio) --- */}
                       {product.variants && product.variants.length > 0 && (
                         <div className="flex items-center gap-1 mt-1.5">
                           {product.variants.map((v, i) => {
                             const masterColor = colors.find(c => c.name.trim().toLowerCase() === v.color.trim().toLowerCase());
                             const hexColor = masterColor ? ((masterColor as any).hexCode || (masterColor as any).colorCode) : (v.colorCode || '#e2e8f0');
+                            const isVariantAgotado = (v as any).stockStatus === 'agotado';
                             return (
-                              <div key={i} title={v.color} className="w-3 h-3 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: hexColor }} />
+                              <div key={i} title={v.color} className={`w-3 h-3 rounded-full border border-slate-300 shadow-sm relative overflow-hidden ${isVariantAgotado ? 'opacity-40' : ''}`} style={{ backgroundColor: hexColor }}>
+                                {isVariantAgotado && <div className="absolute inset-0 w-full h-full bg-red-500 transform rotate-45 scale-y-[0.3]"></div>}
+                              </div>
                             );
                           })}
                         </div>
                       )}
-
                     </div>
                   </div>
                 </td>
@@ -243,7 +255,6 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
         </table>
       </div>
 
-      {/* VISTA TARJETAS MÓVIL */}
       <div className="md:hidden flex flex-col gap-3">
         {filteredProducts.map((product) => {
           const actualStock = product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible');
@@ -258,14 +269,16 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
               <p className="text-xs text-slate-500 truncate mt-0.5 mb-1.5">{product.category}</p>
               {getStockBadge(actualStock)}
               
-              {/* --- SOLUCIÓN: Círculos inteligentes conectados al Muestrario de Colores (Móvil) --- */}
               {product.variants && product.variants.length > 0 && (
                 <div className="flex items-center gap-1 mt-2">
                   {product.variants.map((v, i) => {
                     const masterColor = colors.find(c => c.name.trim().toLowerCase() === v.color.trim().toLowerCase());
                     const hexColor = masterColor ? ((masterColor as any).hexCode || (masterColor as any).colorCode) : (v.colorCode || '#e2e8f0');
+                    const isVariantAgotado = (v as any).stockStatus === 'agotado';
                     return (
-                      <div key={i} title={v.color} className="w-3 h-3 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: hexColor }} />
+                      <div key={i} title={v.color} className={`w-3 h-3 rounded-full border border-slate-300 shadow-sm relative overflow-hidden ${isVariantAgotado ? 'opacity-40' : ''}`} style={{ backgroundColor: hexColor }}>
+                         {isVariantAgotado && <div className="absolute inset-0 w-full h-full bg-red-500 transform rotate-45 scale-y-[0.3]"></div>}
+                      </div>
                     );
                   })}
                 </div>
@@ -300,7 +313,6 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
             
             <div className="p-6 overflow-y-auto space-y-6">
               
-              {/* --- DATOS PRINCIPALES --- */}
               <div className="space-y-4">
                 <h4 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">Datos Principales</h4>
                 <div>
@@ -340,13 +352,12 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
                 </div>
               </div>
 
-              {/* --- GESTIÓN COMERCIAL Y STOCK --- */}
               <div className="space-y-4 pt-4 border-t border-slate-100 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Tag className="w-4 h-4 text-blue-600" /> Inventario y Ofertas</h4>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Tag className="w-4 h-4 text-blue-600" /> Stock General y Ofertas</h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Disponibilidad</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Disponibilidad General</label>
                     <select 
                       value={formData.stockStatus} 
                       onChange={(e) => setFormData({...formData, stockStatus: e.target.value as StockStatus})} 
@@ -355,7 +366,7 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
                     >
                       <option value="disponible">🟢 Disponible (En Stock)</option>
                       <option value="pocas_unidades">🟠 Pocas Unidades (Últimos)</option>
-                      <option value="agotado">🔴 Agotado (Sin Stock)</option>
+                      <option value="agotado">🔴 Agotado Completo (Todo)</option>
                     </select>
                   </div>
 
@@ -383,10 +394,10 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
                 )}
               </div>
 
-              {/* --- VARIANTES --- */}
+              {/* --- CONTROL DE INVENTARIO GRANULAR POR VARIANTES --- */}
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Palette className="w-4 h-4 text-blue-600" /> Variantes por Color</h4>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Palette className="w-4 h-4 text-blue-600" /> Inventario por Colores</h4>
                   {colors.length > 0 ? (
                     <button type="button" onClick={addVariant} disabled={isUploading} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">+ Asignar Color</button>
                   ) : (
@@ -399,19 +410,28 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
                     {formData.variants.map((variant) => {
                       const currentSelectedColor = colors.find(c => c.id === variant.colorId);
                       return (
-                        <div key={variant.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row gap-4 relative items-center">
-                          <div className="w-full sm:w-1/2">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Color</label>
+                        <div key={variant.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col md:flex-row gap-4 relative items-start md:items-center">
+                          <div className="w-full md:w-1/3">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Seleccionar Color</label>
                             <div className="flex gap-2 items-center">
                               <div className="w-6 h-6 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: (currentSelectedColor as any)?.hexCode || (currentSelectedColor as any)?.colorCode || '#ccc' }} />
-                              <select value={variant.colorId} onChange={(e) => updateVariantColorId(variant.id, e.target.value)} disabled={isUploading} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
+                              <select value={variant.colorId} onChange={(e) => updateVariantField(variant.id, 'colorId', e.target.value)} disabled={isUploading} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
                                 {colors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                               </select>
                             </div>
                           </div>
-                          <div className="flex-1 flex items-center gap-3 w-full">
+
+                          <div className="w-full md:w-1/3">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Disponibilidad del Color</label>
+                            <select value={variant.stockStatus} onChange={(e) => updateVariantField(variant.id, 'stockStatus', e.target.value)} disabled={isUploading} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
+                              <option value="disponible">🟢 Disponible</option>
+                              <option value="agotado">🔴 Agotado</option>
+                            </select>
+                          </div>
+
+                          <div className="w-full md:w-1/3 flex items-center gap-3">
                             <div className="flex-1">
-                               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Foto de variante</label>
+                               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Foto (Opcional)</label>
                                <label className="cursor-pointer bg-white border border-slate-200 rounded-lg px-3 py-2 text-center text-xs font-bold text-slate-700 block w-full">
                                   Subir Foto
                                   <input type="file" accept="image/*" className="hidden" onChange={(e) => handleVariantImageUpload(variant.id, e)} disabled={isUploading} required={!formData.imageUrl && formData.variants[0]?.id === variant.id} />
