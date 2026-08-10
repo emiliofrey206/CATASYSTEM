@@ -21,13 +21,9 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   const bOfferBg = store.badgeOfferColor || '#2563eb'; const bOfferText = store.badgeOfferTextColor || '#ffffff';
 
   const firstVariantImg = product.variants && product.variants.length > 0 ? product.variants[0].imageUrl : '';
-  
-  // SOLUCIÓN DE LA PORTADA:
-  // Forzamos a que la imagen por defecto sea SIEMPRE la portada del producto (imageUrl)
   const defaultImage = product.imageUrl || firstVariantImg;
 
   const [activeImage, setActiveImage] = useState(defaultImage);
-  // Comenzamos en 'null' para que no haya color seleccionado al inicio y se muestre la foto grupal
   const [activeColor, setActiveColor] = useState<string | null>(null);
 
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); 
@@ -37,8 +33,19 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
-  const actualStock = product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible');
-  const isAgotado = actualStock === 'agotado';
+  // --- LÓGICA DE STOCK GRANULAR ---
+  // ¿El producto ENTERO está agotado?
+  const isProductGeneralAgotado = product.stockStatus === 'agotado' || product.inStock === false;
+  
+  // Evaluamos la variante activa (si hay una seleccionada)
+  const activeVariantData = product.variants?.find(v => v.color === activeColor);
+  const isActiveVariantAgotado = activeVariantData ? ((activeVariantData as any).stockStatus === 'agotado') : false;
+
+  // El botón de compra se bloquea si el producto general está agotado OR la variante seleccionada está agotada
+  const isCurrentlyAgotado = isProductGeneralAgotado || isActiveVariantAgotado;
+
+  // Estado que se muestra en la etiqueta superior
+  const displayStockBadge = isCurrentlyAgotado ? 'agotado' : (product.stockStatus || 'disponible');
 
   const allImages = useMemo(() => {
     const images: string[] = [];
@@ -48,21 +55,13 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   }, [product]);
 
   useEffect(() => {
-    if (isQuickViewOpen || isLightboxOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.dataset.galleryOpen = 'true'; 
-    } else {
-      document.body.style.overflow = 'auto';
-      document.body.dataset.galleryOpen = 'false';
-    }
+    if (isQuickViewOpen || isLightboxOpen) { document.body.style.overflow = 'hidden'; document.body.dataset.galleryOpen = 'true'; } 
+    else { document.body.style.overflow = 'auto'; document.body.dataset.galleryOpen = 'false'; }
   }, [isQuickViewOpen, isLightboxOpen]);
 
   useEffect(() => {
     if (!isQuickViewOpen) return;
-    const handleQuickViewBack = () => {
-      if (isLightboxOpen) return; 
-      setIsQuickViewOpen(false);
-    };
+    const handleQuickViewBack = () => { if (isLightboxOpen) return; setIsQuickViewOpen(false); };
     window.addEventListener('popstate', handleQuickViewBack);
     return () => window.removeEventListener('popstate', handleQuickViewBack);
   }, [isQuickViewOpen, isLightboxOpen]);
@@ -120,10 +119,10 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
           ) : <div className="w-full h-full flex items-center justify-center opacity-30"><ImageIcon className="w-10 h-10" /></div>}
           
           <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
-            {isAgotado && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md" style={{ backgroundColor: bOutBg, color: bOutText }}>Agotado</span>}
-            {actualStock === 'pocas_unidades' && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md" style={{ backgroundColor: bFewBg, color: bFewText }}>Pocas Unid.</span>}
-            {actualStock === 'disponible' && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md" style={{ backgroundColor: bAvailBg, color: bAvailText }}>Disponible</span>}
-            {product.isOffer && !isAgotado && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md flex items-center gap-1" style={{ backgroundColor: bOfferBg, color: bOfferText }}><Tag className="w-3 h-3" /> Oferta</span>}
+            {displayStockBadge === 'agotado' && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md" style={{ backgroundColor: bOutBg, color: bOutText }}>Agotado</span>}
+            {displayStockBadge === 'pocas_unidades' && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md" style={{ backgroundColor: bFewBg, color: bFewText }}>Pocas Unid.</span>}
+            {displayStockBadge === 'disponible' && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md" style={{ backgroundColor: bAvailBg, color: bAvailText }}>Disponible</span>}
+            {product.isOffer && displayStockBadge !== 'agotado' && <span className="text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-md flex items-center gap-1" style={{ backgroundColor: bOfferBg, color: bOfferText }}><Tag className="w-3 h-3" /> Oferta</span>}
           </div>
         </div>
 
@@ -140,18 +139,28 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                 {product.variants.map((variant, idx) => {
                   const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
                   const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
+                  
+                  // Analizamos si ESTA variante en particular está agotada
+                  const isVariantAgotado = (variant as any).stockStatus === 'agotado' || isProductGeneralAgotado;
 
                   return (
                     <button 
                       key={idx} 
-                      title={variant.color} 
+                      title={`${variant.color}${isVariantAgotado ? ' (Agotado)' : ''}`} 
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClick(variant.color, variant.imageUrl); }} 
-                      className={`w-6 h-6 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
+                      className={`relative w-6 h-6 rounded-full transition-all shadow-sm active:scale-95 overflow-hidden ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 border border-black/10'} ${isVariantAgotado ? 'opacity-40' : ''}`} 
                       style={{ 
                         backgroundColor: hexColor, 
                         boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
                       }} 
-                    />
+                    >
+                      {/* La "X" visual elegante para indicar color agotado */}
+                      {isVariantAgotado && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-[150%] h-[2px] bg-red-500 transform rotate-45 shadow-sm"></div>
+                        </div>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -170,7 +179,13 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
               )}
             </div>
             
-            <button disabled={isAgotado} onClick={(e) => { e.stopPropagation(); onAddToCart?.(product, activeColor); }} className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md" style={{ backgroundColor: accentColor, color: '#fff' }}>
+            <button 
+              disabled={isCurrentlyAgotado} 
+              onClick={(e) => { e.stopPropagation(); onAddToCart?.(product, activeColor); }} 
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md" 
+              style={{ backgroundColor: accentColor, color: '#fff' }}
+              title={isCurrentlyAgotado ? 'Color Agotado' : 'Añadir al Pedido'}
+            >
               <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
@@ -213,7 +228,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                   <>
                     <button onClick={(e) => { e.stopPropagation(); setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1)); }} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 p-2.5 bg-white/50 hover:bg-white/80 backdrop-blur-md rounded-full text-slate-800 transition-colors z-10 shadow-sm"><ChevronLeft className="w-6 h-6" /></button>
                     <button onClick={(e) => { e.stopPropagation(); setGalleryIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1)); }} className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 p-2.5 bg-white/50 hover:bg-white/80 backdrop-blur-md rounded-full text-slate-800 transition-colors z-10 shadow-sm"><ChevronRight className="w-6 h-6" /></button>
-                    
                     <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-10">
                       {allImages.map((_, idx) => <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all ${idx === galleryIndex ? 'bg-black/60 scale-125' : 'bg-black/20'}`} />)}
                     </div>
@@ -221,8 +235,8 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                 )}
 
                 <div className="absolute top-3 left-3 flex flex-col items-start gap-2 z-10">
-                  {product.isOffer && !isAgotado && <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase shadow-md" style={{ backgroundColor: bOfferBg, color: bOfferText }}>Oferta</span>}
-                  {isAgotado && <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase shadow-md" style={{ backgroundColor: bOutBg, color: bOutText }}>Agotado</span>}
+                  {displayStockBadge === 'agotado' && <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase shadow-md" style={{ backgroundColor: bOutBg, color: bOutText }}>Agotado</span>}
+                  {product.isOffer && displayStockBadge !== 'agotado' && <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase shadow-md" style={{ backgroundColor: bOfferBg, color: bOfferText }}>Oferta</span>}
                 </div>
               </div>
 
@@ -248,22 +262,29 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
 
                 {product.variants && product.variants.length > 0 && (
                   <div className="mb-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider mb-3 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'}</span></h4>
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider mb-3 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'} {isActiveVariantAgotado && '(Agotado)'}</span></h4>
                     <div className="flex flex-wrap gap-4">
                         {product.variants.map((variant, idx) => {
                           const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
                           const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
+                          const isVariantAgotado = (variant as any).stockStatus === 'agotado' || isProductGeneralAgotado;
 
                           return (
                             <button 
                               key={idx} 
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVariantClickModal(variant.color, variant.imageUrl); }} 
-                              className={`w-7 h-7 md:w-8 md:h-8 rounded-full transition-all shadow-sm active:scale-95 ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 opacity-70 hover:opacity-100 border border-black/10'}`} 
+                              className={`relative w-7 h-7 md:w-8 md:h-8 rounded-full transition-all shadow-sm active:scale-95 overflow-hidden ${activeColor === variant.color ? 'scale-110 z-10' : 'hover:scale-110 border border-black/10'} ${isVariantAgotado ? 'opacity-40' : ''}`} 
                               style={{ 
                                 backgroundColor: hexColor, 
                                 boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
                               }} 
-                            />
+                            >
+                               {isVariantAgotado && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-[150%] h-[2px] bg-red-500 transform rotate-45 shadow-sm"></div>
+                                </div>
+                              )}
+                            </button>
                           );
                         })}
                     </div>
@@ -272,12 +293,12 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
 
                 <div className="mt-auto pt-2">
                   <button 
-                    disabled={isAgotado} 
+                    disabled={isCurrentlyAgotado} 
                     onClick={() => { onAddToCart?.(product, activeColor); setIsQuickViewOpen(false); }}
                     className="w-full py-3 rounded-xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 shadow-lg"
                     style={{ backgroundColor: accentColor }}
                   >
-                    <ShoppingCart className="w-4 h-4" /> {isAgotado ? 'Producto Agotado' : 'Añadir a mi pedido'}
+                    <ShoppingCart className="w-4 h-4" /> {isCurrentlyAgotado ? 'Color/Producto Agotado' : 'Añadir a mi pedido'}
                   </button>
                 </div>
               </div>
@@ -293,18 +314,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
             <button onClick={() => setIsLightboxOpen(false)} className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50">
               <X className="w-6 h-6" />
             </button>
-
-            {allImages.length > 1 && (
-              <>
-                <button onClick={(e) => { e.stopPropagation(); setGalleryIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1)); }} className="hidden sm:flex absolute left-4 sm:left-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50">
-                  <ChevronLeft className="w-8 h-8" />
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); setGalleryIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1)); }} className="hidden sm:flex absolute right-4 sm:right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50">
-                  <ChevronRight className="w-8 h-8" />
-                </button>
-              </>
-            )}
-
             <motion.div 
               key={galleryIndex} 
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} 
@@ -313,12 +322,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
               onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
             >
               <img src={allImages[galleryIndex]} alt="Detalle máximo" className="w-full h-full object-contain max-h-[75vh] rounded-xl shadow-2xl pointer-events-none select-none" draggable="false" />
-              
-              {allImages.length > 1 && (
-                <div className="flex gap-2.5 mt-6">
-                  {allImages.map((_, idx) => <div key={idx} className={`w-2.5 h-2.5 rounded-full transition-all ${idx === galleryIndex ? 'bg-white scale-125 shadow-md' : 'bg-white/30'}`} />)}
-                </div>
-              )}
             </motion.div>
           </div>
         )}
