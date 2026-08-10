@@ -14,30 +14,27 @@ class CatalogStore {
   private listeners = new Set<() => void>();
 
   constructor() {
-    // CAMBIO: Ahora usa localStorage para recordar el dispositivo de forma permanente
     this.isAuthenticated = localStorage.getItem('catalog_auth') === 'true';
     this.loadFromSupabase();
-    this.setupRealtime(); // Iniciamos el radar de tiempo real
+    this.setupRealtime(); 
   }
 
-  // --- LÓGICA DE TIEMPO REAL ---
+  // --- LÓGICA DE TIEMPO REAL (RADAR MAESTRO OPTIMIZADO) ---
   setupRealtime() {
-    supabase.channel('catalog-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-        this.loadFromSupabase(); // Si hay cambio en productos, recarga silenciosamente
+    // Escuchamos TODO el esquema 'public' de un solo golpe. 
+    // Si cualquier cosa cambia, el catálogo reacciona al instante.
+    supabase.channel('catalog-master-channel')
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+        console.log('⚡ ¡Actualización en vivo detectada!', payload);
+        this.loadFromSupabase(); 
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
-        this.loadFromSupabase(); // Si hay cambio en categorías, recarga silenciosamente
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'colors' }, () => {
-        this.loadFromSupabase();
-      })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Radar Realtime:', status);
+      });
   }
 
   async loadFromSupabase() {
     try {
-      // Optimizamos: Lanzamos todas las peticiones simultáneamente en paralelo
       const [storesResult, productsResult, categoriesResult, colorsResult] = await Promise.all([
         supabase.from('stores').select('*').order('created_at', { ascending: true }),
         supabase.from('products').select('*').order('created_at', { ascending: false }),
@@ -45,13 +42,11 @@ class CatalogStore {
         supabase.from('colors').select('*').order('name', { ascending: true })
       ]);
 
-      // Evaluamos si hubo errores en alguna de las peticiones
       if (storesResult.error) throw storesResult.error;
       if (productsResult.error) throw productsResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
       if (colorsResult.error) throw colorsResult.error;
 
-      // Asignamos los datos una sola vez
       this.stores = storesResult.data || [];
       this.products = productsResult.data || [];
       this.categories = categoriesResult.data || [];
@@ -64,7 +59,7 @@ class CatalogStore {
       console.error("Error cargando datos de Supabase:", error);
     } finally {
       this.isLoaded = true;
-      this.notify(); // Notificamos una sola vez al terminar todo
+      this.notify(); 
     }
   }
 
@@ -80,7 +75,6 @@ class CatalogStore {
   login = (user: string, pass: string) => {
     if (user === 'admin' && pass === 'admin') {
       this.isAuthenticated = true;
-      // CAMBIO: Guardamos la sesión en el dispositivo (localStorage)
       localStorage.setItem('catalog_auth', 'true');
       this.notify();
       return true;
@@ -90,7 +84,6 @@ class CatalogStore {
 
   logout = () => {
     this.isAuthenticated = false;
-    // CAMBIO: Borramos la sesión del dispositivo solo si el usuario presiona "Salir"
     localStorage.removeItem('catalog_auth');
     this.notify();
   }
@@ -127,8 +120,6 @@ class CatalogStore {
     const storeId = this.activeStoreId || (this.stores[0]?.id || 'store-1');
     const newProduct = { ...product, id: `prod-${Date.now()}`, storeId };
     
-    // Lo agregamos a la vista temporalmente para que se sienta instantáneo,
-    // el Realtime se encargará de sincronizar si hay otros dispositivos.
     this.products = [newProduct, ...this.products];
     this.notify();
     
@@ -186,12 +177,7 @@ class CatalogStore {
     await supabase.from('categories').delete().eq('id', id);
   }
 
- // ==========================================
-  // MÓDULO DE COLORES: ARQUITECTURA BLINDADA
-  // ==========================================
-
   addColor = async (colorData: any) => {
-    // Generamos un ID único en el frontend como seguro de vida
     const colorWithId = {
       ...colorData,
       id: colorData.id || crypto.randomUUID() 
@@ -213,7 +199,6 @@ class CatalogStore {
   }
 
   updateColor = async (id: string, updatedData: any) => {
-    // 1. Intentamos actualizar la Base de Datos real
     const { data, error } = await supabase
       .from('colors')
       .update(updatedData)
@@ -226,13 +211,11 @@ class CatalogStore {
       throw error;
     }
 
-    // 2. Actualizamos la pantalla solo tras la confirmación
     this.colors = this.colors.map(c => c.id === id ? { ...c, ...data } : c);
     this.notify();
   }
 
   deleteColor = async (id: string) => {
-    // 1. Intentamos eliminar el registro de la Base de Datos
     const { error } = await supabase
       .from('colors')
       .delete()
@@ -243,7 +226,6 @@ class CatalogStore {
       throw error;
     }
 
-    // 2. Si la BD lo eliminó con éxito, lo borramos de la pantalla
     this.colors = this.colors.filter(c => c.id !== id);
     this.notify();
   }
