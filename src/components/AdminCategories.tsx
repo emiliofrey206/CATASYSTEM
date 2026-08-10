@@ -1,268 +1,188 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { Category, Store } from '../types';
+import { LayoutList, Edit2, Trash2, Plus, X, ArrowUp, ArrowDown, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { Store, Category } from '../types';
 import { supabase } from '../supabase';
 
 interface AdminCategoriesProps {
   activeStore: Store;
   categories: Category[];
-  addCategory: (c: Omit<Category, 'id' | 'storeId'>) => void;
-  updateCategory: (id: string, c: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
+  addCategory: (data: Omit<Category, 'id'>) => Promise<void>;
+  updateCategory: (id: string, data: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
-export function AdminCategories({ activeStore, categories = [], addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export function AdminCategories({ activeStore, categories, addCategory, updateCategory, deleteCategory }: AdminCategoriesProps) {
+  const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
-  // Estados para la imagen
+  const [name, setName] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    imageUrl: ''
-  });
+  // Ordenamos las categorías por su número de 'order'
+  const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  if (!activeStore) return null;
-
-  const handleOpenModal = (categoryToEdit?: Category) => {
+  const resetForm = () => {
+    setIsEditing(false);
+    setEditingId(null);
+    setName('');
+    setImageUrl('');
     setImageFile(null);
-    if (categoryToEdit) {
-      setEditingId(categoryToEdit.id);
-      setFormData({
-        name: categoryToEdit.name || '',
-        description: categoryToEdit.description || '',
-        imageUrl: categoryToEdit.imageUrl || ''
-      });
-    } else {
-      setEditingId(null);
-      setFormData({ name: '', description: '', imageUrl: '' });
-    }
-    setIsModalOpen(true);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEdit = (cat: Category) => {
+    setIsEditing(true);
+    setEditingId(cat.id);
+    setName(cat.name);
+    setImageUrl(cat.imageUrl || '');
+    setImageFile(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
-      setFormData({ ...formData, imageUrl: URL.createObjectURL(file) });
+      setImageUrl(URL.createObjectURL(file));
     }
+  };
+
+  const uploadImage = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `cat-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${activeStore.id}/${fileName}`;
+    const { error } = await supabase.storage.from('categorias').upload(filePath, file);
+    if (error) throw error;
+    const { data } = supabase.storage.from('categorias').getPublicUrl(filePath);
+    return data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsUploading(true);
-
+    if (!name.trim()) return;
+    setIsSaving(true);
     try {
-      let finalImageUrl = formData.imageUrl;
+      let finalImageUrl = imageUrl;
+      if (imageFile) finalImageUrl = await uploadImage(imageFile);
 
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `cat-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${activeStore.id}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('productos')
-          .upload(filePath, imageFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage.from('productos').getPublicUrl(filePath);
-        finalImageUrl = data.publicUrl;
-      }
-
-      const categoryData = {
-        name: formData.name,
-        description: formData.description,
-        imageUrl: finalImageUrl,
-        parentId: null // Forzamos nulo para mantener la base de datos limpia de subcategorías
-      };
-
-      if (editingId) {
-        updateCategory(editingId, categoryData);
+      if (isEditing && editingId) {
+        await updateCategory(editingId, { name, imageUrl: finalImageUrl });
       } else {
-        addCategory(categoryData);
+        // Le asignamos un orden al final de la lista al crearla
+        const maxOrder = sortedCategories.length > 0 ? Math.max(...sortedCategories.map(c => c.order || 0)) : 0;
+        await addCategory({ storeId: activeStore.id, name, imageUrl: finalImageUrl, order: maxOrder + 10 });
       }
-      
-      setIsModalOpen(false);
-      setImageFile(null);
-    } catch (error: any) {
-      alert(`Error subiendo la imagen: ${error.message}`);
+      resetForm();
+    } catch (error) {
+      console.error(error);
+      alert('Error al guardar la categoría');
     } finally {
-      setIsUploading(false);
+      setIsSaving(false);
     }
   };
 
+  // LA MAGIA DE REORDENAR
+  const handleMove = async (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === sortedCategories.length - 1) return;
+
+    // Nos aseguramos de que todas tengan un orden base para evitar errores matemáticos
+    const items = sortedCategories.map((c, i) => ({ ...c, order: c.order ?? i * 10 }));
+    
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Intercambiamos los números de orden
+    const tempOrder = items[index].order;
+    items[index].order = items[swapIndex].order;
+    items[swapIndex].order = tempOrder;
+
+    // Guardamos los dos cambios en la base de datos
+    await updateCategory(items[index].id, { order: items[index].order });
+    await updateCategory(items[swapIndex].id, { order: items[swapIndex].order });
+  };
+
   return (
-    <div className="bg-white border border-slate-200 rounded-[2rem] p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 uppercase">Categorías</h2>
-          <p className="text-sm text-slate-500 mt-1">Administra las categorías de tu catálogo.</p>
-        </div>
-        
-        <button
-          onClick={() => handleOpenModal()}
-          className="w-full sm:w-auto bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Nueva Categoría
-        </button>
+    <div className="bg-white border border-slate-200 rounded-[2rem] p-6 lg:p-8">
+      <div className="mb-8">
+        <h2 className="text-2xl font-black text-slate-900 uppercase">Categorías</h2>
+        <p className="text-sm text-slate-500 mt-1">Organiza y ordena las secciones de {activeStore.name}.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {categories.map((category) => (
-          <div key={category.id} className="bg-white border border-slate-200 rounded-2xl flex items-center p-4 gap-4 shadow-sm hover:border-slate-300 transition-colors">
-            
-            <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
-              {category.imageUrl ? (
-                <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover" />
-              ) : (
-                <ImageIcon className="w-6 h-6 text-slate-300" />
-              )}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-slate-900 text-base truncate">{category.name}</h3>
-              {category.description && (
-                <p className="text-xs text-slate-500 truncate mt-0.5">{category.description}</p>
-              )}
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="w-full lg:w-80 shrink-0">
+          <div className="bg-slate-50 border border-slate-200 rounded-[2rem] p-6 sticky top-6">
+            <div className="flex items-center gap-2 mb-6">
+              <LayoutList className="w-5 h-5 text-blue-600" />
+              <h3 className="text-sm font-black uppercase text-slate-800">{isEditing ? 'Editar Categoría' : 'Nueva Categoría'}</h3>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0 border-l border-slate-100 pl-3">
-              <button
-                onClick={() => handleOpenModal(category)}
-                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Editar"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => {
-                  if(confirm(`¿Seguro que deseas eliminar "${category.name}"?`)) {
-                    deleteCategory(category.id);
-                  }
-                }}
-                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Eliminar"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {categories.length === 0 && (
-          <div className="col-span-full py-12 text-center text-slate-500 text-sm bg-slate-50 rounded-xl border border-slate-100/50">
-            No hay categorías registradas. Crea la primera para empezar a organizar.
-          </div>
-        )}
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">
-                {editingId ? 'Editar Categoría' : 'Nueva Categoría'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                disabled={isUploading}
-                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto space-y-5">
-              
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre de Categoría</label>
-                <input
-                  required
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  disabled={isUploading}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
-                />
+                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Nombre de Categoría</label>
+                <input type="text" required value={name} onChange={e => setName(e.target.value)} disabled={isSaving} className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. Anillos, Cadenas..." />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Descripción (Opcional)</label>
-                <textarea
-                  rows={2}
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  disabled={isUploading}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 resize-none disabled:opacity-50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Imagen Referencial</label>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-4">
-                    <label className={`flex-1 cursor-pointer bg-white border border-slate-200 border-dashed rounded-xl px-4 py-4 text-center transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}>
-                      <span className="text-sm font-medium text-blue-600">Subir foto local</span>
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        className="hidden" 
-                        onChange={handleImageUpload}
-                        disabled={isUploading}
-                      />
-                    </label>
-                    <span className="text-xs text-slate-400 font-medium uppercase">O</span>
-                    <input
-                      type="text"
-                      placeholder="Pegar URL externa..."
-                      value={formData.imageUrl}
-                      onChange={(e) => {
-                        setFormData({...formData, imageUrl: e.target.value});
-                        setImageFile(null);
-                      }}
-                      disabled={isUploading}
-                      className="flex-[2] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-300 disabled:opacity-50"
-                    />
-                  </div>
-                  
-                  {formData.imageUrl && (
-                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
-                      <img src={formData.imageUrl} alt="Vista previa" className="w-full h-full object-cover" />
+                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Foto (Opcional)</label>
+                <div className="border border-slate-200 rounded-xl p-4 bg-white">
+                  <label className="flex items-center justify-center gap-2 text-xs font-bold text-blue-600 cursor-pointer hover:bg-blue-50 py-2.5 rounded-lg border border-dashed border-blue-200 transition-colors">
+                    <Upload className="w-4 h-4" /> Subir Imagen
+                    <input type="file" accept="image/*" onChange={handleImageChange} disabled={isSaving} className="hidden" />
+                  </label>
+                  {imageUrl && (
+                    <div className="mt-3 relative inline-block">
+                      <img src={imageUrl} alt="Preview" className="w-16 h-16 object-cover rounded-lg border border-slate-200 shadow-sm" />
+                      <button type="button" onClick={() => { setImageUrl(''); setImageFile(null); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"><X className="w-3 h-3" /></button>
                     </div>
                   )}
                 </div>
               </div>
 
-            </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                disabled={isUploading}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isUploading}
-                className="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 inline-flex items-center justify-center min-w-[140px]"
-              >
-                {isUploading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
-                ) : (
-                  'Guardar'
+              <div className="pt-2 flex flex-col gap-2">
+                <button type="submit" disabled={isSaving} className="w-full bg-black hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4"/> Guardar</>}
+                </button>
+                {isEditing && (
+                  <button type="button" onClick={resetForm} disabled={isSaving} className="w-full bg-white border border-slate-200 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-50 transition-colors">Cancelar</button>
                 )}
-              </button>
-            </div>
-          </form>
+              </div>
+            </form>
+          </div>
         </div>
-      )}
+
+        <div className="flex-1">
+          {sortedCategories.length === 0 ? (
+             <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50">
+               <p className="text-slate-500 font-medium">No hay categorías. Crea la primera.</p>
+             </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {sortedCategories.map((cat, index) => (
+                <div key={cat.id} className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-4 hover:shadow-md transition-shadow">
+                  
+                  {/* BOTONES PARA REORDENAR */}
+                  <div className="flex flex-col gap-1 shrink-0 bg-slate-50 rounded-lg p-1 border border-slate-100">
+                    <button onClick={() => handleMove(index, 'up')} disabled={index === 0} className="p-1 text-slate-400 hover:text-black disabled:opacity-30 transition-colors"><ArrowUp className="w-4 h-4" /></button>
+                    <button onClick={() => handleMove(index, 'down')} disabled={index === sortedCategories.length - 1} className="p-1 text-slate-400 hover:text-black disabled:opacity-30 transition-colors"><ArrowDown className="w-4 h-4" /></button>
+                  </div>
+
+                  <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                    {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 text-slate-300" />}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-slate-900 uppercase truncate">{cat.name}</h4>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => handleEdit(cat)} className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => { if(window.confirm(`¿Eliminar ${cat.name}?`)) deleteCategory(cat.id); }} className="p-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
