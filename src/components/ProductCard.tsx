@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ShoppingCart, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { ShoppingCart, Image as ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Tag, AlertCircle } from 'lucide-react';
 import { Product, Store, Color } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -29,6 +29,9 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);   
   
+  // NUEVO: Estado para manejar nuestra alerta flotante moderna
+  const [warningToast, setWarningToast] = useState<string | null>(null);
+
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
@@ -97,6 +100,31 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
     if (idx !== -1) setGalleryIndex(idx);
   };
 
+  // --- LÓGICA INTELIGENTE DE AÑADIR AL CARRITO ---
+  const handleSmartAddToCart = (e: React.MouseEvent, fromModal: boolean = false) => {
+    e.stopPropagation();
+
+    // Verificamos si hay variantes y NO se ha seleccionado un color
+    if (product.variants && product.variants.length > 0 && !activeColor) {
+      
+      // Si el producto SOLO tiene 1 color, lo auto-seleccionamos mágicamente sin molestar al cliente
+      if (product.variants.length === 1) {
+        onAddToCart?.(product, product.variants[0].color);
+        if (fromModal) setIsQuickViewOpen(false);
+        return;
+      } 
+      
+      // Si tiene 2 o más colores, mostramos la alerta flotante moderna
+      setWarningToast(`Selecciona un color para: ${product.name}`);
+      setTimeout(() => setWarningToast(null), 3000);
+      return;
+    }
+
+    // Si ya seleccionó un color (o no tiene variantes), lo agregamos normal
+    onAddToCart?.(product, activeColor);
+    if (fromModal) setIsQuickViewOpen(false);
+  };
+
   return (
     <>
       <div className="rounded-[2rem] overflow-hidden border border-black/5 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full group" style={{ backgroundColor: cardColor, color: textColor }}>
@@ -131,7 +159,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                 {product.variants.map((variant, idx) => {
                   const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
                   const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
-                  
                   const isVariantAgotado = (variant as any).stockStatus === 'agotado' || isProductGeneralAgotado;
 
                   return (
@@ -171,15 +198,7 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
             
             <button 
               disabled={isCurrentlyAgotado} 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                // --- VALIDACIÓN ESTRICTA DE COLOR ---
-                if (product.variants && product.variants.length > 0 && !activeColor) {
-                  alert(`⚠️ Por favor, selecciona un color para: ${product.name}`);
-                  return;
-                }
-                onAddToCart?.(product, activeColor); 
-              }} 
+              onClick={(e) => handleSmartAddToCart(e, false)} 
               className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md" 
               style={{ backgroundColor: accentColor, color: '#fff' }}
               title={isCurrentlyAgotado ? 'Color Agotado' : 'Añadir al Pedido'}
@@ -292,15 +311,7 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                 <div className="mt-auto pt-2">
                   <button 
                     disabled={isCurrentlyAgotado} 
-                    onClick={() => { 
-                      // --- VALIDACIÓN ESTRICTA DE COLOR EN EL MODAL ---
-                      if (product.variants && product.variants.length > 0 && !activeColor) {
-                        alert(`⚠️ Por favor, selecciona un color para: ${product.name}`);
-                        return;
-                      }
-                      onAddToCart?.(product, activeColor); 
-                      setIsQuickViewOpen(false); 
-                    }}
+                    onClick={(e) => handleSmartAddToCart(e, true)}
                     className="w-full py-3 rounded-xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 shadow-lg"
                     style={{ backgroundColor: accentColor }}
                   >
@@ -330,6 +341,21 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
               <img src={allImages[galleryIndex]} alt="Detalle máximo" className="w-full h-full object-contain max-h-[75vh] rounded-xl shadow-2xl pointer-events-none select-none" draggable="false" />
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- NUESTRO TOAST FLOTANTE MODERNO (REEMPLAZA EL ALERT NATIVO) --- */}
+      <AnimatePresence>
+        {warningToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }} 
+            animate={{ opacity: 1, y: 0, scale: 1 }} 
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold w-[90%] max-w-xs justify-center"
+          >
+            <AlertCircle className="w-5 h-5 text-orange-400" />
+            <span className="truncate">{warningToast}</span>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
