@@ -33,18 +33,10 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
-  // --- LÓGICA DE STOCK GRANULAR ---
-  // ¿El producto ENTERO está agotado?
   const isProductGeneralAgotado = product.stockStatus === 'agotado' || product.inStock === false;
-  
-  // Evaluamos la variante activa (si hay una seleccionada)
   const activeVariantData = product.variants?.find(v => v.color === activeColor);
   const isActiveVariantAgotado = activeVariantData ? ((activeVariantData as any).stockStatus === 'agotado') : false;
-
-  // El botón de compra se bloquea si el producto general está agotado OR la variante seleccionada está agotada
   const isCurrentlyAgotado = isProductGeneralAgotado || isActiveVariantAgotado;
-
-  // Estado que se muestra en la etiqueta superior
   const displayStockBadge = isCurrentlyAgotado ? 'agotado' : (product.stockStatus || 'disponible');
 
   const allImages = useMemo(() => {
@@ -140,7 +132,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                   const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
                   const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
                   
-                  // Analizamos si ESTA variante en particular está agotada
                   const isVariantAgotado = (variant as any).stockStatus === 'agotado' || isProductGeneralAgotado;
 
                   return (
@@ -154,7 +145,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                         boxShadow: activeColor === variant.color ? `0 0 0 2px ${cardColor}, 0 0 0 4px ${textColor}` : 'none' 
                       }} 
                     >
-                      {/* La "X" visual elegante para indicar color agotado */}
                       {isVariantAgotado && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-[150%] h-[2px] bg-red-500 transform rotate-45 shadow-sm"></div>
@@ -181,7 +171,15 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
             
             <button 
               disabled={isCurrentlyAgotado} 
-              onClick={(e) => { e.stopPropagation(); onAddToCart?.(product, activeColor); }} 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                // --- VALIDACIÓN ESTRICTA DE COLOR ---
+                if (product.variants && product.variants.length > 0 && !activeColor) {
+                  alert(`⚠️ Por favor, selecciona un color para: ${product.name}`);
+                  return;
+                }
+                onAddToCart?.(product, activeColor); 
+              }} 
               className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md" 
               style={{ backgroundColor: accentColor, color: '#fff' }}
               title={isCurrentlyAgotado ? 'Color Agotado' : 'Añadir al Pedido'}
@@ -294,7 +292,15 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                 <div className="mt-auto pt-2">
                   <button 
                     disabled={isCurrentlyAgotado} 
-                    onClick={() => { onAddToCart?.(product, activeColor); setIsQuickViewOpen(false); }}
+                    onClick={() => { 
+                      // --- VALIDACIÓN ESTRICTA DE COLOR EN EL MODAL ---
+                      if (product.variants && product.variants.length > 0 && !activeColor) {
+                        alert(`⚠️ Por favor, selecciona un color para: ${product.name}`);
+                        return;
+                      }
+                      onAddToCart?.(product, activeColor); 
+                      setIsQuickViewOpen(false); 
+                    }}
                     className="w-full py-3 rounded-xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 shadow-lg"
                     style={{ backgroundColor: accentColor }}
                   >
