@@ -112,11 +112,11 @@ function PublicCatalogView() {
   
   return (
     <PublicCatalog 
-      store={store} 
-      products={catalog.products.filter(p => p.storeId === store.id)} 
-      categories={catalog.categories.filter(c => c.storeId === store.id)} 
-      colors={catalog.colors.filter(c => c.storeId === store.id)} 
-    />
+  store={store} 
+  products={catalog.products.filter(p => p.storeId === store.id && !p.isHidden)} // <--- FILTRO MÁGICO APLICADO
+  categories={catalog.categories.filter(c => c.storeId === store.id)} 
+  colors={catalog.colors.filter(c => c.storeId === store.id)} 
+/>
   );
 }
 
