@@ -194,11 +194,19 @@ class CatalogStore {
       status: 'pendiente' 
     };
     
+    // 1. Lo mostramos en pantalla inmediatamente
     this.orders = [newOrder, ...this.orders];
     this.notify();
     
+    // 2. Lo enviamos a la Base de Datos
     const { error } = await supabase.from('orders').insert([newOrder]);
-    if (error) console.error("Error creando pedido:", error);
+    
+    // 3. SI HAY UN ERROR, AHORA SÍ NOS VA A AVISAR
+    if (error) {
+      console.error("Error creando pedido en Supabase:", error);
+      alert(`⚠️ Error guardando el pedido en la base de datos: ${error.message}\nPor favor, verifica los permisos de Supabase.`);
+    }
+    
     return newOrder;
   }
 
