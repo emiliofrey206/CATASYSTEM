@@ -53,6 +53,7 @@ export interface Product {
   isOffer: boolean;         // NUEVO: Switch de Oferta
   offerPrice?: number;      // NUEVO: Precio rebajado
   variants?: ProductVariant[];
+  isHidden?: boolean;
 }
 
 export interface Category {
