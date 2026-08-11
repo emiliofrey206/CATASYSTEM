@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2, Home, LayoutGrid } from 'lucide-react';
+import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2, Home, LayoutGrid, User } from 'lucide-react';
 import { ProductCard } from './ProductCard';
-import { Product, Category, Store, Color } from '../types';
+import { Product, Category, Store, Color, Order } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- INTELIGENCIA MATEMÁTICA DE CONTRASTE ---
-// Analiza un color Hex y devuelve blanco (#ffffff) o oscuro (#0f172a) para máxima legibilidad
 function getContrastColor(hexColor: string) {
   const hex = hexColor?.replace('#', '') || 'ffffff';
   const r = parseInt(hex.substr(0, 2), 16) || 255;
@@ -20,6 +19,7 @@ interface PublicCatalogProps {
   products: Product[];
   categories: Category[];
   colors: Color[];
+  addOrder: (order: Omit<Order, 'id' | 'status' | 'created_at'>) => Promise<Order>; // <-- EL CABLE DEL GATILLO DE VENTAS
 }
 
 interface CartItem {
@@ -29,7 +29,7 @@ interface CartItem {
   quantity: number;
 }
 
-export function PublicCatalog({ store, products, categories, colors }: PublicCatalogProps) {
+export function PublicCatalog({ store, products, categories, colors, addOrder }: PublicCatalogProps) {
   const headerColor = store.headerColor || '#ffffff';
   const bgColor = store.bgColor || '#f8fafc';
   const cardColor = store.cardColor || '#ffffff';
@@ -40,7 +40,6 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
   const checkoutBtnTextColor = store.checkoutBtnTextColor || '#ffffff';
   const cartItemBgColor = store.cartItemBgColor || '#ffffff';
 
-  // Obtenemos el color ideal de alto contraste basado en el fondo principal (bgColor)
   const contrastBgColor = getContrastColor(bgColor);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,29 +52,30 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
   const [isFirstAdd, setIsFirstAdd] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ id: number, text: string } | null>(null);
 
-  const uiState = useRef({ category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen });
+  // --- NUEVOS ESTADOS PARA EL CHECKOUT ---
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [checkoutName, setCheckoutName] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // ORDENAMOS LAS CATEGORÍAS SEGÚN LO QUE CONFIGURASTE EN EL PANEL
+  const uiState = useRef({ category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen, checkout: isCheckoutModalOpen });
+
   const sortedCategories = useMemo(() => {
     return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [categories]);
 
-  useEffect(() => { uiState.current = { category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen }; }, [selectedCategory, isMobileFiltersOpen, isSearchMobileOpen, isCartOpen]);
+  useEffect(() => { uiState.current = { category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen, checkout: isCheckoutModalOpen }; }, [selectedCategory, isMobileFiltersOpen, isSearchMobileOpen, isCartOpen, isCheckoutModalOpen]);
 
   useEffect(() => {
-    if (store && store.name) {
-      document.title = `${store.name} | Catálogo`;
-    }
-    return () => {
-      document.title = 'CATASYSTEM';
-    };
+    if (store && store.name) { document.title = `${store.name} | Catálogo`; }
+    return () => { document.title = 'CATASYSTEM'; };
   }, [store.name]);
 
   useEffect(() => {
     window.history.pushState({ view: 'home' }, '');
     const handleBack = () => {
       if (document.body.dataset.galleryOpen === 'true') { window.history.pushState({ view: 'catalog' }, ''); return; }
-      const { category, menu, search, cart: cartOpen } = uiState.current;
+      const { category, menu, search, cart: cartOpen, checkout } = uiState.current;
+      if (checkout) { setIsCheckoutModalOpen(false); window.history.pushState({ view: 'cart' }, ''); return; }
       if (cartOpen) { setIsCartOpen(false); window.history.pushState({ view: 'catalog' }, ''); return; }
       if (menu) { setIsMobileFiltersOpen(false); window.history.pushState({ view: 'catalog' }, ''); return; }
       if (search) { setIsSearchMobileOpen(false); window.history.pushState({ view: 'catalog' }, ''); return; }
@@ -136,23 +136,57 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
 
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  const handleCheckoutWhatsApp = () => {
-    const rawNumber = store.whatsapp || "584120000000"; 
-    const cleanNumber = rawNumber.replace(/\D/g, ''); 
+  // --- LA MAGIA: PROCESAR EL PEDIDO Y ABRIR WHATSAPP ---
+  const processCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cart.length === 0) return;
+    setIsProcessing(true);
 
-    if (!store.whatsapp) {
-      alert("Nota: Esta tienda aún no tiene un número de WhatsApp configurado. Se enviará a un número por defecto.");
+    try {
+      // 1. Armamos los datos del pedido con los productos del carrito
+      const orderItems = cart.map(item => {
+        let itemImage = item.product.imageUrl;
+        if (item.color && item.product.variants) { const variantInfo = item.product.variants.find(v => v.color === item.color); if (variantInfo && variantInfo.imageUrl) itemImage = variantInfo.imageUrl; }
+        if (!itemImage && item.product.variants && item.product.variants.length > 0) itemImage = item.product.variants[0].imageUrl;
+        return {
+          productId: item.product.id, productName: item.product.name, color: item.color, quantity: item.quantity,
+          price: item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price,
+          imageUrl: itemImage
+        };
+      });
+
+      // 2. Disparamos el pedido hacia tu Base de Datos (Esto lo hace aparecer en tu Historial)
+      const createdOrder = await addOrder({
+        storeId: store.id,
+        totalAmount: cartTotal,
+        customerName: checkoutName,
+        items: orderItems
+      });
+
+      // 3. Armamos el mensaje de WhatsApp incluyendo el número de pedido mágico
+      const rawNumber = store.whatsapp || "584120000000"; 
+      const cleanNumber = rawNumber.replace(/\D/g, ''); 
+      let text = `🛍️ *NUEVO PEDIDO: ${createdOrder.id}*\n*Cliente:* ${checkoutName}\n\n¡Hola! Me gustaría confirmar este pedido de su tienda ${store.name}:\n\n`;
+      
+      cart.forEach(item => {
+        const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
+        const colorText = item.color ? ` (Color: ${item.color})` : '';
+        text += `▪ ${item.quantity}x ${item.product.name}${colorText} - $${(price * item.quantity).toFixed(2)}\n`;
+      });
+      text += `\n*💰 Total a pagar: $${cartTotal.toFixed(2)}*\n\n¿Tienen disponibilidad y cuáles son los métodos de pago?`;
+      
+      // 4. Abrimos WhatsApp y limpiamos el sistema para la siguiente compra
+      window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`, '_blank');
+      setCart([]);
+      setIsCheckoutModalOpen(false);
+      setIsCartOpen(false);
+      setIsFirstAdd(true);
+
+    } catch (error) {
+      alert("Hubo un error al procesar tu pedido. Por favor intenta de nuevo.");
+    } finally {
+      setIsProcessing(false);
     }
-
-    let text = `🛍️ *NUEVO PEDIDO - ${store.name}*\n\n¡Hola! Me gustaría confirmar este pedido:\n\n`;
-    cart.forEach(item => {
-      const price = item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price;
-      const colorText = item.color ? ` (Color: ${item.color})` : '';
-      text += `▪ ${item.quantity}x ${item.product.name}${colorText} - $${(price * item.quantity).toFixed(2)}\n`;
-    });
-    text += `\n*💰 Total a pagar: $${cartTotal.toFixed(2)}*\n\n¿Tienen disponibilidad y cuáles son los métodos de pago?`;
-    
-    window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const filteredProducts = useMemo(() => {
@@ -174,7 +208,6 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         <LayoutGrid className="w-4 h-4" /> Todos los productos
       </button>
       <div className="pt-2 pb-1"><p className="text-[10px] uppercase font-bold tracking-widest opacity-50 px-3" style={{ color: textColor }}>Explorar</p></div>
-      {/* SE USA LA LISTA ORDENADA AQUI */}
       {sortedCategories.map((cat) => (
         <button key={cat.id} onClick={() => handleSelectCategory(cat.name)} className="w-full text-left p-3 rounded-xl text-sm font-semibold transition-colors border border-transparent" style={{ backgroundColor: selectedCategory === cat.name ? `${accentColor}20` : 'transparent', color: selectedCategory === cat.name ? accentColor : textColor, borderColor: selectedCategory === cat.name ? accentColor : 'transparent' }}>{cat.name}</button>
       ))}
@@ -242,7 +275,6 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-5">
-                  {/* SE USA LA LISTA ORDENADA AQUI TAMBIEN */}
                   {sortedCategories.map(cat => (
                     <button key={cat.id} onClick={() => handleSelectCategory(cat.name)} className="relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden group shadow-sm border border-black/5 block w-full transition-transform active:scale-95" style={{ backgroundColor: cardColor }}>
                       {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><ImageIcon className="w-8 h-8" style={{ color: textColor }} /></div>}
@@ -293,7 +325,6 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
         </div>
       </main>
 
-      {/* --- FIRMA DEL DESARROLLADOR CON INTELIGENCIA DE CONTRASTE --- */}
       <footer className="w-full text-center py-8 mt-auto px-4 opacity-80 hover:opacity-100 transition-opacity duration-300">
         <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: contrastBgColor }}>
           CataSystem Desarrollado por ING. EMILIO FREY, 2026
@@ -305,7 +336,7 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
           <motion.div
             key={toastMessage.id}
             initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold w-[90%] max-w-xs justify-center"
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold w-[90%] max-w-xs justify-center"
           >
             <CheckCircle2 className="w-5 h-5 text-green-400" />
             <span className="truncate">{toastMessage.text}</span>
@@ -390,7 +421,6 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
                           <div className="flex items-center justify-between mt-2">
                             <p className="text-sm font-black" style={{ color: textColor }}>${price.toFixed(2)}</p>
                             <div className="flex items-center gap-1.5 rounded-lg p-0.5 border border-black/10" style={{ backgroundColor: cardColor }}>
-                              {/* --- BOTONES DEL CARRITO CON INTELIGENCIA DE CONTRASTE --- */}
                               <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-90 transition-transform active:scale-95" style={{ backgroundColor: bgColor, color: contrastBgColor }}><Minus className="w-3 h-3" /></button>
                               <span className="text-xs font-bold w-4 text-center" style={{ color: textColor }}>{item.quantity}</span>
                               <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded shadow-sm font-bold opacity-90 transition-transform active:scale-95" style={{ backgroundColor: bgColor, color: contrastBgColor }}><Plus className="w-3 h-3" /></button>
@@ -415,13 +445,50 @@ export function PublicCatalog({ store, products, categories, colors }: PublicCat
                     <ArrowLeft className="w-4 h-4" /> Seguir comprando
                   </button>
 
-                  <button onClick={handleCheckoutWhatsApp} className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-3 active:scale-95 shadow-lg" style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}>
+                  <button 
+                    onClick={() => { setIsCheckoutModalOpen(true); window.history.pushState({ view: 'checkout' }, ''); }} 
+                    className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-3 active:scale-95 shadow-lg" 
+                    style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}
+                  >
                     <MessageCircle className="w-6 h-6" /> Enviar Pedido
                   </button>
                 </div>
               )}
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* --- EL MODAL FINAL DE CHECKOUT --- */}
+      <AnimatePresence>
+        {isCheckoutModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.form 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onSubmit={processCheckout} 
+              className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden"
+              style={{ backgroundColor: cardColor, color: textColor }}
+            >
+              <div className="p-6 border-b border-black/5 flex justify-between items-center" style={{ backgroundColor: headerColor }}>
+                <h3 className="text-lg font-black uppercase">Finalizar Pedido</h3>
+                <button type="button" onClick={() => setIsCheckoutModalOpen(false)} className="p-2 rounded-full opacity-70"><X className="w-5 h-5" /></button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <p className="text-sm opacity-80 mb-2">Por favor, ingresa tu nombre para procesar tu pedido de <b>${cartTotal.toFixed(2)}</b>.</p>
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold uppercase mb-2 opacity-80"><User className="w-4 h-4" /> Tu Nombre / Apellido</label>
+                  <input required type="text" value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} disabled={isProcessing} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-sm font-semibold outline-none text-slate-900" placeholder="Ej. Emilio Frey" />
+                </div>
+              </div>
+              
+              <div className="p-6 border-t border-black/5 bg-black/5">
+                <button type="submit" disabled={isProcessing || !checkoutName} className="w-full py-4 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-md" style={{ backgroundColor: checkoutBtnColor, color: checkoutBtnTextColor }}>
+                  {isProcessing ? 'Procesando...' : 'Confirmar y Enviar por WhatsApp'}
+                </button>
+              </div>
+            </motion.form>
+          </div>
         )}
       </AnimatePresence>
     </div>
