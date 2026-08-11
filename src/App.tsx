@@ -86,7 +86,7 @@ function AdminLayout() {
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
           <div className="max-w-5xl mx-auto">
-            {currentView === 'admin-orders' && <AdminOrders activeStore={activeStore} orders={activeStoreOrders} confirmPayment={catalog.confirmOrderPayment} cancelOrder={catalog.cancelOrder} />}
+            {currentView === 'admin-orders' && <AdminOrders activeStore={activeStore} orders={activeStoreOrders} products={activeStoreProducts} addOrder={catalog.addOrder} confirmPayment={catalog.confirmOrderPayment} cancelOrder={catalog.cancelOrder} />}
             {currentView === 'admin-stores' && <AdminStores stores={catalog.stores} addStore={catalog.addStore} updateStore={catalog.updateStore} deleteStore={catalog.deleteStore} />}
             {currentView === 'admin-products' && <AdminProducts activeStore={activeStore} products={activeStoreProducts} categories={activeStoreCategories} colors={activeStoreColors} addProduct={catalog.addProduct} updateProduct={catalog.updateProduct} deleteProduct={catalog.deleteProduct} />}
             {currentView === 'admin-categories' && <AdminCategories activeStore={activeStore} categories={activeStoreCategories} addCategory={catalog.addCategory} updateCategory={catalog.updateCategory} deleteCategory={catalog.deleteCategory} />}
