@@ -117,6 +117,7 @@ function PublicCatalogView() {
       products={catalog.products.filter(p => p.storeId === store.id && !p.isHidden)} 
       categories={catalog.categories.filter(c => c.storeId === store.id)} 
       colors={catalog.colors.filter(c => c.storeId === store.id)} 
+      addOrder={catalog.addOrder} // <--- GATILLO DE PEDIDOS CONECTADO
     />
   );
 }
