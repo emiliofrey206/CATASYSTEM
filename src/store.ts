@@ -32,25 +32,29 @@ class CatalogStore {
 
   async loadFromSupabase() {
     try {
-      const [storesRes, productsRes, categoriesRes, colorsRes, ordersRes] = await Promise.all([
+      // 1. Cargamos el núcleo del sistema (si esto falla, se detiene)
+      const [storesRes, productsRes, categoriesRes, colorsRes] = await Promise.all([
         supabase.from('stores').select('*').order('created_at', { ascending: true }),
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('categories').select('*').order('created_at', { ascending: true }),
-        supabase.from('colors').select('*').order('name', { ascending: true }),
-        supabase.from('orders').select('*').order('created_at', { ascending: false }) // Cargamos los pedidos
+        supabase.from('colors').select('*').order('name', { ascending: true })
       ]);
 
       if (storesRes.error) throw storesRes.error;
-      if (productsRes.error) throw productsRes.error;
-      if (categoriesRes.error) throw categoriesRes.error;
-      if (colorsRes.error) throw colorsRes.error;
-      if (ordersRes.error) throw ordersRes.error;
-
+      
       this.stores = storesRes.data || [];
       this.products = productsRes.data || [];
       this.categories = categoriesRes.data || [];
       this.colors = colorsRes.data || [];
-      this.orders = ordersRes.data || [];
+
+      // 2. Cargamos los pedidos por separado (Fail-Safe)
+      // Si la tabla es nueva y tiene bloqueos, no tumbará el sistema principal.
+      const ordersRes = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      if (!ordersRes.error) {
+        this.orders = ordersRes.data || [];
+      } else {
+        console.warn("Nota: No se pudieron cargar los pedidos (falta de permisos SQL).", ordersRes.error.message);
+      }
 
       if (this.stores.length > 0 && !this.activeStoreId) {
         this.activeStoreId = this.stores[0].id;
