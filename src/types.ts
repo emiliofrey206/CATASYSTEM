@@ -36,8 +36,10 @@ export type StockStatus = 'disponible' | 'pocas_unidades' | 'agotado';
 
 export interface ProductVariant {
   color: string;
-  colorCode?: string;
-  imageUrl: string;
+  colorCode: string;
+  imageUrl?: string;
+  stockStatus?: StockStatus;
+  stockQuantity?: number;
 }
 
 export interface Product {
@@ -54,6 +56,7 @@ export interface Product {
   offerPrice?: number;      // NUEVO: Precio rebajado
   variants?: ProductVariant[];
   isHidden?: boolean;
+ stockQuantity?: number;
 }
 
 export interface Category {
@@ -64,4 +67,27 @@ export interface Category {
   imageUrl?: string;
   parentId?: string | null; // Si es null, es categoría principal
  order?: number;
+}
+
+export interface OrderItem {
+  productId: string;
+  productName: string;
+  color: string | null;
+  quantity: number;
+  price: number;
+  imageUrl?: string;
+}
+
+export interface Order {
+  id: string;
+  storeId: string;
+  status: 'pendiente' | 'pagado' | 'cancelado';
+  customerName?: string;
+  customerPhone?: string;
+  paymentMethod?: string;
+  referenceNumber?: string;
+  totalAmount: number;
+  items: OrderItem[];
+  created_at?: string;
+  paid_at?: string;
 }
