@@ -38,9 +38,8 @@ function AdminLayout() {
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 shrink-0 bg-white border-b border-slate-200 z-10 relative">
         <div className="flex items-center gap-3 flex-1">
           {/* ICONO PC (Engranaje) */}
-          <div className="hidden md:flex w-10 h-10 bg-black rounded-xl items-center justify-center shrink-0 shadow-sm">
-            <Settings className="w-6 h-6 text-white" />
-          </div>
+          {/* LOGO EN PC (SOBRE FONDO BLANCO) */}
+          <img src="/logo-catasystem.png" alt="CataSystem" className="h-8 md:h-10 object-contain hidden sm:block drop-shadow-sm" />
           
           {/* BOTÓN MENÚ MÓVIL (Hamburguesa) */}
           <button 
