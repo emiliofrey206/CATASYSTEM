@@ -31,7 +31,7 @@ export function Login() {
           {/* AQUI ESTÁ LA SOLUCIÓN: CONTENEDOR BLANCO SÓLIDO (LIGHTBOX) A MÁXIMO TAMAÑO */}
           <div className="mb-10 lg:mb-14 inline-flex w-full max-w-[500px]">
             <div className="w-full bg-white px-6 py-6 sm:px-10 sm:py-8 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/20 flex items-center justify-center">
-              <img src="/logo-catasystem.png" alt="CataSystem Logo" className="h-24 sm:h-32 lg:h-40 w-auto object-contain" />
+              <img src="/logo-light.png" alt="CataSystem Logo" className="h-24 sm:h-32 lg:h-40 w-auto object-contain" />
             </div>
           </div>
 
