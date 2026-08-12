@@ -43,8 +43,8 @@ function AdminLayout() {
             <Menu className="w-6 h-6 text-white" />
           </button>
 
-          {/* LOGO EN PC (SOBRE FONDO BLANCO) */}
-          <img src="/logo-catasystem.png" alt="CataSystem" className="h-8 md:h-10 object-contain hidden sm:block drop-shadow-sm" />
+         {/* LOGO EN PC (SOBRE FONDO BLANCO) - AUMENTADO */}
+           <img src="/logo-catasystem.png" alt="CataSystem" className="h-12 md:h-16 lg:h-20 w-auto object-contain hidden sm:block drop-shadow-sm transition-all" />
         </div>
 
         <div className="flex items-center justify-center gap-3 flex-1">
@@ -103,8 +103,8 @@ function AdminLayout() {
                 className="fixed inset-y-0 left-0 w-[80%] max-w-sm z-[100] bg-white flex flex-col shadow-2xl md:hidden"
               >
                 <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0 bg-slate-50">
-                  {/* LOGO CORONANDO EL MENÚ MÓVIL (FONDO CLARO) */}
-                  <img src="/logo-catasystem.png" alt="CataSystem" className="h-7 sm:h-8 object-contain drop-shadow-sm" />
+                 {/* LOGO CORONANDO EL MENÚ MÓVIL (FONDO CLARO) - AUMENTADO */}
+                   <img src="/logo-catasystem.png" alt="CataSystem" className="h-12 sm:h-14 w-auto object-contain drop-shadow-sm" />
                   <button onClick={() => setIsMobileAdminMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 rounded-full bg-white shadow-sm border border-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 
