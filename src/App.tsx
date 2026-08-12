@@ -10,12 +10,10 @@ import { AdminColors } from './components/AdminColors';
 import { AdminAppearance } from './components/AdminAppearance'; 
 import { AdminOrders } from './components/AdminOrders';
 import { Login } from './components/Login';
-import { motion, AnimatePresence } from 'motion/react'; // <-- Importamos para el menú móvil
+import { motion, AnimatePresence } from 'motion/react';
 
 function AdminLayout() {
   const [currentView, setCurrentView] = useState<'admin-products' | 'admin-categories' | 'admin-stores' | 'admin-colors' | 'admin-appearance' | 'admin-orders'>('admin-orders');
-  
-  // NUEVO: Estado para controlar el menú lateral en móviles
   const [isMobileAdminMenuOpen, setIsMobileAdminMenuOpen] = useState(false);
 
   const catalog = useCatalog();
@@ -37,19 +35,16 @@ function AdminLayout() {
       {/* HEADER PRINCIPAL */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 shrink-0 bg-white border-b border-slate-200 z-10 relative">
         <div className="flex items-center gap-3 flex-1">
-          {/* ICONO PC (Engranaje) */}
-          {/* LOGO EN PC (SOBRE FONDO BLANCO) */}
-          <img src="/logo-catasystem.png" alt="CataSystem" className="h-8 md:h-10 object-contain hidden sm:block drop-shadow-sm" />
-          
-          {/* BOTÓN MENÚ MÓVIL (Hamburguesa) */}
+          {/* BOTÓN MENÚ MÓVIL */}
           <button 
             onClick={() => setIsMobileAdminMenuOpen(true)} 
-            className="md:hidden w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-sm active:scale-95 transition-transform"
+            className="md:hidden w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shrink-0 shadow-sm active:scale-95 transition-transform"
           >
             <Menu className="w-6 h-6 text-white" />
           </button>
 
-          <h1 className="text-xl font-black tracking-tight hidden sm:block uppercase text-slate-800">CATASYSTEM</h1>
+          {/* LOGO EN PC (SOBRE FONDO BLANCO) */}
+          <img src="/logo-catasystem.png" alt="CataSystem" className="h-8 md:h-10 object-contain hidden sm:block drop-shadow-sm" />
         </div>
 
         <div className="flex items-center justify-center gap-3 flex-1">
@@ -93,13 +88,10 @@ function AdminLayout() {
           </div>
         </aside>
 
-        {/* --- NUEVO: MENÚ LATERAL MÓVIL (OFF-CANVAS) --- */}
+        {/* --- MENÚ LATERAL MÓVIL (OFF-CANVAS) --- */}
         <AnimatePresence>
           {isMobileAdminMenuOpen && (
             <>
-              {/* LOGO CORONANDO EL MENÚ MÓVIL (FONDO CLARO) */}
-                  <img src="/logo-catasystem.png" alt="CataSystem" className="h-7 sm:h-8 object-contain drop-shadow-sm" />
-              
               <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
                 className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] md:hidden" 
@@ -110,11 +102,9 @@ function AdminLayout() {
                 transition={{ type: 'spring', bounce: 0, duration: 0.4 }} 
                 className="fixed inset-y-0 left-0 w-[80%] max-w-sm z-[100] bg-white flex flex-col shadow-2xl md:hidden"
               >
-                <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0 bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center"><Settings className="w-5 h-5 text-white" /></div>
-                    <h3 className="text-lg font-black uppercase text-slate-900">Menú</h3>
-                  </div>
+                <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0 bg-slate-50">
+                  {/* LOGO CORONANDO EL MENÚ MÓVIL (FONDO CLARO) */}
+                  <img src="/logo-catasystem.png" alt="CataSystem" className="h-7 sm:h-8 object-contain drop-shadow-sm" />
                   <button onClick={() => setIsMobileAdminMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 rounded-full bg-white shadow-sm border border-slate-200"><X className="w-5 h-5" /></button>
                 </div>
                 
@@ -142,7 +132,7 @@ function AdminLayout() {
           )}
         </AnimatePresence>
 
-        {/* --- BARRA INFERIOR FIJA MÓVIL (Optimizada y Limpia) --- */}
+        {/* --- BARRA INFERIOR FIJA MÓVIL --- */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 z-40 px-4 py-2 flex justify-between gap-2 pb-safe">
           <button onClick={() => setCurrentView('admin-orders')} className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl flex-1 transition-colors ${currentView === 'admin-orders' ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:bg-slate-50'}`}>
             <Receipt className="w-6 h-6" />
