@@ -503,7 +503,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
                 <p className="text-sm opacity-80 mb-2">Por favor, ingresa tu nombre para procesar tu pedido de <b>${cartTotal.toFixed(2)}</b>.</p>
                 <div>
                   <label className="flex items-center gap-2 text-xs font-bold uppercase mb-2 opacity-80"><User className="w-4 h-4" /> Tu Nombre / Apellido</label>
-                  <input required type="text" value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} disabled={isProcessing} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-sm font-semibold outline-none text-slate-900" placeholder="Ej. Emilio Frey" />
+                  <input required type="text" value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} disabled={isProcessing} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-sm font-semibold outline-none text-slate-900" placeholder="Ej. Yoseany Carpio" />
                 </div>
               </div>
               
