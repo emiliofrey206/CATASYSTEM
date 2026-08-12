@@ -4,14 +4,24 @@ import { ProductCard } from './ProductCard';
 import { Product, Category, Store, Color, Order } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
-// --- INTELIGENCIA MATEMÁTICA DE CONTRASTE ---
+// --- INTELIGENCIA MATEMÁTICA DE CONTRASTE (CORREGIDA) ---
 function getContrastColor(hexColor: string) {
-  const hex = hexColor?.replace('#', '') || 'ffffff';
-  const r = parseInt(hex.substr(0, 2), 16) || 255;
-  const g = parseInt(hex.substr(2, 2), 16) || 255;
-  const b = parseInt(hex.substr(4, 2), 16) || 255;
+  let hex = hexColor?.replace('#', '') || 'ffffff';
+  
+  // Si el hex tiene 3 dígitos (ej: #fff), convertirlo a 6 (ej: #ffffff)
+  if (hex.length === 3) {
+    hex = hex.split('').map(char => char + char).join('');
+  }
+  
+  const r = parseInt(hex.substr(0, 2), 16) || 0;
+  const g = parseInt(hex.substr(2, 2), 16) || 0;
+  const b = parseInt(hex.substr(4, 2), 16) || 0;
+  
+  // Fórmula YIQ estándar de W3C para accesibilidad
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  return yiq >= 128 ? '#0f172a' : '#ffffff';
+  
+  // Si el fondo es oscuro (yiq < 128), devuelve texto blanco. Si es claro, devuelve texto negro.
+  return yiq < 128 ? '#ffffff' : '#0f172a';
 }
 
 interface PublicCatalogProps {
@@ -329,13 +339,13 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </main>
 
-      {/* FOOTER PÚBLICO: SELLO DE AUTORÍA VASR LINK DINÁMICO */}
-      <footer className="w-full pb-12 pt-8 mt-auto flex flex-col items-center justify-center border-t border-black/5">
+     {/* FOOTER PÚBLICO: SELLO DE AUTORÍA VASR LINK DINÁMICO */}
+      <footer className="w-full pb-12 pt-8 mt-auto flex flex-col items-center justify-center border-t border-black/5" style={{ backgroundColor: bgColor }}>
         <p 
           className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase mb-3 opacity-60" 
-          style={{ color: textColor }}
+          style={{ color: contrastBgColor }}
         >
-          Tecnología desarrollada por ING. EMILIO FREY, 2026
+          Tecnología impulsada por
         </p>
         <div className="opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300 cursor-pointer">
           <img 
