@@ -161,9 +161,15 @@ function AdminLayout() {
 
       </div>
       
-      <footer className="hidden md:block w-full text-center py-6 border-t border-slate-200">
-        <p className="text-xs font-black tracking-widest text-slate-400 uppercase">
-          CataSystem Desarrollado por ING. EMILIO FREY, 2026
+      {/* FOOTER CORPORATIVO */}
+      <footer className="hidden md:flex w-full flex-col items-center justify-center py-8 border-t border-slate-200 bg-white">
+        <img 
+          src="/logo-catasystem.png" 
+          alt="CataSystem by VASR LINK" 
+          className="h-8 sm:h-10 w-auto object-contain mb-3 opacity-60 hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-300 cursor-default" 
+        />
+        <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+          Tecnología desarrollada por ING. EMILIO FREY, 2026
         </p>
       </footer>
     </div>
