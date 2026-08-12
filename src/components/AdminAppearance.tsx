@@ -100,6 +100,48 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
             <ColorPicker label="Color del Texto Principal" value={colors.textColor} onChange={(v) => handleChange('textColor', v)} />
           </div>
 
+          {/* --- NUEVA TARJETA: CINTILLO DE ANUNCIOS (TICKER) --- */}
+          <div className="bg-slate-50 rounded-[2rem] p-6 sm:p-8 border border-slate-100 shadow-sm mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-blue-500" /> Cintillo de Avisos
+                </h3>
+                <p className="text-sm text-slate-500 font-medium mt-1">Barra de texto móvil para ofertas o notificaciones.</p>
+              </div>
+              
+              {/* Botón Switch para Activar/Desactivar */}
+              <button 
+                type="button"
+                onClick={() => updateStore({ isAnnouncementActive: !activeStore.isAnnouncementActive })}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${activeStore.isAnnouncementActive ? 'bg-green-500' : 'bg-slate-300'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${activeStore.isAnnouncementActive ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div className={`transition-all duration-300 ${activeStore.isAnnouncementActive ? 'opacity-100 max-h-[500px]' : 'opacity-40 pointer-events-none max-h-[200px]'}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Texto del Anuncio</label>
+                  <input 
+                    type="text" 
+                    value={activeStore.announcementText || ''} 
+                    onChange={(e) => updateStore({ announcementText: e.target.value })}
+                    placeholder="Ej. 🔥 ENVÍO GRATIS POR HOY 🔥"
+                    className="w-full bg-white border border-slate-200 text-slate-900 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                  />
+                </div>
+                <ColorPickerField 
+                  label="Color del Cintillo" 
+                  value={activeStore.announcementColor || '#1e293b'} 
+                  onChange={(val) => updateStore({ announcementColor: val })} 
+                />
+              </div>
+            </div>
+          </div>
+          {/* --- FIN TARJETA CINTILLO --- */}
+
           <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-3">
             <h3 className="font-bold text-blue-900 border-b border-blue-200 pb-2 mb-3">Botón Final (Enviar Pedido)</h3>
             <ColorPicker label="Fondo del Botón" value={colors.checkoutBtnColor} onChange={(v) => handleChange('checkoutBtnColor', v)} />
