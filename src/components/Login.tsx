@@ -28,10 +28,10 @@ export function Login() {
 
         <div className="relative z-10 flex-1 flex flex-col justify-center py-10 lg:py-0">
           
-          {/* AQUI ESTÁ LA SOLUCIÓN: CONTENEDOR BLANCO SÓLIDO (LIGHTBOX) Y MÁS GRANDE */}
-          <div className="mb-10 lg:mb-14 inline-flex">
-            <div className="bg-white px-6 py-4 sm:px-8 sm:py-5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/20 flex items-center justify-center">
-              <img src="/logo-catasystem.png" alt="CataSystem Logo" className="h-14 sm:h-16 lg:h-20 w-auto object-contain" />
+          {/* AQUI ESTÁ LA SOLUCIÓN: CONTENEDOR BLANCO SÓLIDO (LIGHTBOX) A MÁXIMO TAMAÑO */}
+          <div className="mb-10 lg:mb-14 inline-flex w-full max-w-[500px]">
+            <div className="w-full bg-white px-6 py-6 sm:px-10 sm:py-8 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/20 flex items-center justify-center">
+              <img src="/logo-catasystem.png" alt="CataSystem Logo" className="h-24 sm:h-32 lg:h-40 w-auto object-contain" />
             </div>
           </div>
 
