@@ -131,36 +131,39 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
               <button 
                 type="button"
                 onClick={() => handleChange('isAnnouncementActive', !settings.isAnnouncementActive)}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${settings.isAnnouncementActive ? 'bg-green-500' : 'bg-slate-300'}`}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 shrink-0 ${settings.isAnnouncementActive ? 'bg-green-500' : 'bg-slate-300'}`}
               >
                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${settings.isAnnouncementActive ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
 
-            <div className={`transition-all duration-300 ${settings.isAnnouncementActive ? 'opacity-100 max-h-[500px]' : 'opacity-40 pointer-events-none max-h-[200px]'}`}>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-1">
+            <div className={`transition-all duration-300 overflow-hidden ${settings.isAnnouncementActive ? 'opacity-100 max-h-[500px]' : 'opacity-40 pointer-events-none max-h-0 sm:max-h-[200px]'}`}>
+              <div className="flex flex-col gap-5 mt-2">
+                {/* Texto del Anuncio - FILA COMPLETA */}
+                <div>
                   <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Texto del Anuncio</label>
                   <input 
                     type="text" 
                     value={settings.announcementText || ''} 
                     onChange={(e) => handleChange('announcementText', e.target.value)}
-                    placeholder="Ej. 🔥 ENVÍO GRATIS 🔥"
+                    placeholder="Ej. 🔥 ENVÍO GRATIS POR HOY 🔥"
                     className="w-full bg-white border border-slate-200 text-slate-900 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                   />
                 </div>
-                <div className="lg:col-span-1">
+                
+                {/* Colores - 2 COLUMNAS */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <ColorPicker 
                     label="Color Fondo" 
                     value={settings.announcementColor} 
                     onChange={(val) => handleChange('announcementColor', val)} 
+                    slim
                   />
-                </div>
-                <div className="lg:col-span-1">
                   <ColorPicker 
                     label="Color Texto" 
                     value={settings.announcementTextColor} 
                     onChange={(val) => handleChange('announcementTextColor', val)} 
+                    slim
                   />
                 </div>
               </div>
