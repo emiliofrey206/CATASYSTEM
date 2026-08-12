@@ -97,6 +97,9 @@ function AdminLayout() {
         <AnimatePresence>
           {isMobileAdminMenuOpen && (
             <>
+              {/* LOGO CORONANDO EL MENÚ MÓVIL (FONDO CLARO) */}
+                  <img src="/logo-catasystem.png" alt="CataSystem" className="h-7 sm:h-8 object-contain drop-shadow-sm" />
+              
               <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
                 className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] md:hidden" 
