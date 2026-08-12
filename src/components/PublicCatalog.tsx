@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'motion/react';
 function getContrastColor(hexColor: string) {
   let hex = hexColor?.replace('#', '') || 'ffffff';
   
-  // Si el hex tiene 3 dígitos (ej: #fff), convertirlo a 6 (ej: #ffffff)
   if (hex.length === 3) {
     hex = hex.split('').map(char => char + char).join('');
   }
@@ -17,10 +16,7 @@ function getContrastColor(hexColor: string) {
   const g = parseInt(hex.substr(2, 2), 16) || 0;
   const b = parseInt(hex.substr(4, 2), 16) || 0;
   
-  // Fórmula YIQ estándar de W3C para accesibilidad
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  
-  // Si el fondo es oscuro (yiq < 128), devuelve texto blanco. Si es claro, devuelve texto negro.
   return yiq < 128 ? '#ffffff' : '#0f172a';
 }
 
@@ -29,7 +25,7 @@ interface PublicCatalogProps {
   products: Product[];
   categories: Category[];
   colors: Color[];
-  addOrder: (order: Omit<Order, 'id' | 'status' | 'created_at'>) => Promise<Order>; // <-- EL CABLE DEL GATILLO DE VENTAS
+  addOrder: (order: Omit<Order, 'id' | 'status' | 'created_at'>) => Promise<Order>;
 }
 
 interface CartItem {
@@ -51,9 +47,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
   const cartItemBgColor = store.cartItemBgColor || '#ffffff';
 
   const contrastBgColor = getContrastColor(bgColor);
-  
-  // --- MOTOR DE CONTRASTE DINÁMICO PARA EL LOGO VASR LINK ---
-  // Si el contraste pide texto blanco (#ffffff), el fondo es oscuro -> Usamos logo-light.
   const systemLogo = contrastBgColor === '#ffffff' ? '/logo-light.png' : '/logo-catasystem.png';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,7 +59,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
   const [isFirstAdd, setIsFirstAdd] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ id: number, text: string } | null>(null);
 
-  // --- NUEVOS ESTADOS PARA EL CHECKOUT ---
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [checkoutName, setCheckoutName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -77,7 +69,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [categories]);
 
-  // --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO (AHORA SÍ ADENTRO DEL COMPONENTE) ---
+  // --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO ---
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -169,14 +161,12 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
 
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  // --- LA MAGIA: PROCESAR EL PEDIDO Y ABRIR WHATSAPP ---
   const processCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
     setIsProcessing(true);
 
     try {
-      // 1. Armamos los datos del pedido con los productos del carrito
       const orderItems = cart.map(item => {
         let itemImage = item.product.imageUrl;
         if (item.color && item.product.variants) { const variantInfo = item.product.variants.find(v => v.color === item.color); if (variantInfo && variantInfo.imageUrl) itemImage = variantInfo.imageUrl; }
@@ -188,7 +178,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         };
       });
 
-      // 2. Disparamos el pedido hacia tu Base de Datos
       const createdOrder = await addOrder({
         storeId: store.id,
         totalAmount: cartTotal,
@@ -196,7 +185,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         items: orderItems
       });
 
-      // 3. Armamos el mensaje de WhatsApp incluyendo el número de pedido mágico
       const rawNumber = store.whatsapp || "584120000000"; 
       const cleanNumber = rawNumber.replace(/\D/g, ''); 
       let text = `🛍️ *NUEVO PEDIDO: ${createdOrder.id}*\n*Cliente:* ${checkoutName}\n\n¡Hola! Me gustaría confirmar este pedido de su tienda ${store.name}:\n\n`;
@@ -208,7 +196,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       });
       text += `\n*💰 Total a pagar: $${cartTotal.toFixed(2)}*\n\n¿Tienen disponibilidad y cuáles son los métodos de pago?`;
       
-      // 4. Abrimos WhatsApp y limpiamos el sistema
       window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`, '_blank');
       setCart([]);
       setIsCheckoutModalOpen(false);
@@ -286,7 +273,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       </header>
 
       {/* --- CINTILLO DE ANUNCIOS (TICKER) --- */}
-      {store.isAnnouncementActive && store.announcementText && (
+      {store.isAnnouncementActive && store.announcementText && store.announcementText.trim() !== '' && (
         <div 
           className="w-full overflow-hidden py-2 sm:py-2.5 shadow-sm border-y border-black/5 z-20 sticky top-16 lg:top-0 lg:relative" 
           style={{ backgroundColor: store.announcementColor || '#1e293b' }}
@@ -294,8 +281,10 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
           <div className="w-full relative flex items-center overflow-hidden">
             <p 
               className="text-xs sm:text-sm font-black uppercase tracking-widest animate-ticker"
-              style={{ color: getContrastColor(store.announcementColor || '#1e293b') }}
+              style={{ color: store.announcementTextColor || '#ffffff' }}
             >
+              <span className="mx-8">{store.announcementText}</span>
+              <span className="mx-8 opacity-50">•</span>
               <span className="mx-8">{store.announcementText}</span>
               <span className="mx-8 opacity-50">•</span>
               <span className="mx-8">{store.announcementText}</span>
@@ -306,7 +295,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       )}
       {/* --- FIN CINTILLO --- */}
-      
+
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
         <div className="flex flex-col lg:flex-row lg:gap-8 h-full">
           
@@ -380,7 +369,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </main>
 
-     {/* FOOTER PÚBLICO: SELLO DE AUTORÍA VASR LINK DINÁMICO */}
+      {/* FOOTER PÚBLICO: SELLO DE AUTORÍA VASR LINK DINÁMICO */}
       <footer className="w-full pb-12 pt-8 mt-auto flex flex-col items-center justify-center border-t border-black/5" style={{ backgroundColor: bgColor }}>
         <p 
           className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase mb-3 opacity-60" 
