@@ -39,25 +39,6 @@ interface CartItem {
   quantity: number;
 }
 
-// --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO ---
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes ticker {
-        0% { transform: translateX(100%); }
-        100% { transform: translateX(-100%); }
-      }
-      .animate-ticker {
-        display: inline-block;
-        white-space: nowrap;
-        animation: ticker 25s linear infinite;
-        padding-left: 100%;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => { document.head.removeChild(style); };
-  }, []);
-
 export function PublicCatalog({ store, products, categories, colors, addOrder }: PublicCatalogProps) {
   const headerColor = store.headerColor || '#ffffff';
   const bgColor = store.bgColor || '#f8fafc';
@@ -95,6 +76,25 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
   const sortedCategories = useMemo(() => {
     return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [categories]);
+
+  // --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO (AHORA SÍ ADENTRO DEL COMPONENTE) ---
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes ticker {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+      }
+      .animate-ticker {
+        display: inline-block;
+        white-space: nowrap;
+        animation: ticker 25s linear infinite;
+        padding-left: 100%;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
 
   useEffect(() => { uiState.current = { category: selectedCategory, menu: isMobileFiltersOpen, search: isSearchMobileOpen, cart: isCartOpen, checkout: isCheckoutModalOpen }; }, [selectedCategory, isMobileFiltersOpen, isSearchMobileOpen, isCartOpen, isCheckoutModalOpen]);
 
@@ -285,7 +285,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </header>
 
-{/* --- CINTILLO DE ANUNCIOS (TICKER) --- */}
+      {/* --- CINTILLO DE ANUNCIOS (TICKER) --- */}
       {store.isAnnouncementActive && store.announcementText && (
         <div 
           className="w-full overflow-hidden py-2 sm:py-2.5 shadow-sm border-y border-black/5 z-20 sticky top-16 lg:top-0 lg:relative" 
