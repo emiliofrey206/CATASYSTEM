@@ -29,9 +29,7 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);   
   
-  // NUEVO: Estado para manejar nuestra alerta flotante moderna
   const [warningToast, setWarningToast] = useState<string | null>(null);
-
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
@@ -100,27 +98,18 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
     if (idx !== -1) setGalleryIndex(idx);
   };
 
-  // --- LÓGICA INTELIGENTE DE AÑADIR AL CARRITO ---
   const handleSmartAddToCart = (e: React.MouseEvent, fromModal: boolean = false) => {
     e.stopPropagation();
-
-    // Verificamos si hay variantes y NO se ha seleccionado un color
     if (product.variants && product.variants.length > 0 && !activeColor) {
-      
-      // Si el producto SOLO tiene 1 color, lo auto-seleccionamos mágicamente sin molestar al cliente
       if (product.variants.length === 1) {
         onAddToCart?.(product, product.variants[0].color);
         if (fromModal) setIsQuickViewOpen(false);
         return;
       } 
-      
-      // Si tiene 2 o más colores, mostramos la alerta flotante moderna
       setWarningToast(`Selecciona un color para: ${product.name}`);
       setTimeout(() => setWarningToast(null), 3000);
       return;
     }
-
-    // Si ya seleccionó un color (o no tiene variantes), lo agregamos normal
     onAddToCart?.(product, activeColor);
     if (fromModal) setIsQuickViewOpen(false);
   };
@@ -131,7 +120,14 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
         <div onClick={handleOpenQuickView} className="relative aspect-square bg-black/5 overflow-hidden shrink-0 cursor-pointer">
           {activeImage ? (
             <>
-              <img src={activeImage} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              {/* MAGIA APLICADA AQUÍ: loading="lazy" y decoding="async" */}
+              <img 
+                src={activeImage} 
+                alt={product.name} 
+                loading="lazy" 
+                decoding="async" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+              />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
                 <div className="w-10 h-10 rounded-full bg-white/90 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-75 group-hover:scale-100"><Maximize2 className="w-5 h-5 text-slate-800" /></div>
               </div>
@@ -319,7 +315,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                   </button>
                 </div>
               </div>
-
             </motion.div>
           </div>
         )}
@@ -344,7 +339,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
         )}
       </AnimatePresence>
 
-      {/* --- NUESTRO TOAST FLOTANTE MODERNO (REEMPLAZA EL ALERT NATIVO) --- */}
       <AnimatePresence>
         {warningToast && (
           <motion.div
