@@ -28,10 +28,10 @@ export function Login() {
 
         <div className="relative z-10 flex-1 flex flex-col justify-center py-10 lg:py-0">
           
-          {/* AQUÍ ESTÁ EL LOGO EN EL LADO OSCURO */}
-          <div className="mb-10 lg:mb-16 inline-flex">
-            <div className="bg-white/5 backdrop-blur-sm p-4 sm:p-5 rounded-3xl border border-white/10 shadow-2xl">
-              <img src="/logo-catasystem.png" alt="CataSystem Logo" className="h-12 lg:h-16 object-contain drop-shadow-lg" />
+          {/* AQUI ESTÁ LA SOLUCIÓN: CONTENEDOR BLANCO SÓLIDO (LIGHTBOX) Y MÁS GRANDE */}
+          <div className="mb-10 lg:mb-14 inline-flex">
+            <div className="bg-white px-6 py-4 sm:px-8 sm:py-5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/20 flex items-center justify-center">
+              <img src="/logo-catasystem.png" alt="CataSystem Logo" className="h-14 sm:h-16 lg:h-20 w-auto object-contain" />
             </div>
           </div>
 
@@ -87,9 +87,9 @@ export function Login() {
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
           <div className="w-full max-w-[400px]">
             
-            {/* AQUÍ ESTÁ EL LOGO EN EL MÓVIL (Lado Blanco) */}
+            {/* LOGO EN EL MÓVIL (Lado Blanco) TAMBIÉN MÁS GRANDE */}
             <div className="lg:hidden flex items-center justify-center mb-10">
-              <img src="/logo-catasystem.png" alt="CataSystem Logo" className="h-14 sm:h-16 object-contain drop-shadow-sm" />
+              <img src="/logo-catasystem.png" alt="CataSystem Logo" className="h-16 sm:h-20 w-auto object-contain drop-shadow-sm" />
             </div>
 
             <div className="bg-white/70 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white relative overflow-hidden">
