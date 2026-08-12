@@ -69,19 +69,19 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [categories]);
 
-  // --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO ---
+  // --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO (BUCLE INFINITO SIN CORTES) ---
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
-      @keyframes ticker {
-        0% { transform: translateX(100%); }
-        100% { transform: translateX(-100%); }
+      @keyframes marquee-scroll {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
       }
-      .animate-ticker {
-        display: inline-block;
-        white-space: nowrap;
-        animation: ticker 25s linear infinite;
-        padding-left: 100%;
+      .animate-marquee {
+        display: flex;
+        width: max-content;
+        /* 50s hace que se mueva lento y constante. Si quieres más lento, sube a 60s */
+        animation: marquee-scroll 50s linear infinite; 
       }
     `;
     document.head.appendChild(style);
@@ -272,25 +272,27 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </header>
 
-      {/* --- CINTILLO DE ANUNCIOS (TICKER) --- */}
-      {store.isAnnouncementActive && store.announcementText && store.announcementText.trim() !== '' && (
+      {/* --- CINTILLO DE ANUNCIOS (TICKER SEAMLESS) --- */}
+      {store.isAnnouncementActive === true && store.announcementText && store.announcementText.trim() !== '' && (
         <div 
-          className="w-full overflow-hidden py-2 sm:py-2.5 shadow-sm border-y border-black/5 z-20 sticky top-16 lg:top-0 lg:relative" 
+          className="w-full overflow-hidden py-2 sm:py-2.5 shadow-sm border-y border-black/5 z-20 sticky top-16 lg:top-0 lg:relative flex" 
           style={{ backgroundColor: store.announcementColor || '#1e293b' }}
         >
-          <div className="w-full relative flex items-center overflow-hidden">
-            <p 
-              className="text-xs sm:text-sm font-black uppercase tracking-widest animate-ticker"
-              style={{ color: store.announcementTextColor || '#ffffff' }}
-            >
-              <span className="mx-8">{store.announcementText}</span>
-              <span className="mx-8 opacity-50">•</span>
-              <span className="mx-8">{store.announcementText}</span>
-              <span className="mx-8 opacity-50">•</span>
-              <span className="mx-8">{store.announcementText}</span>
-              <span className="mx-8 opacity-50">•</span>
-              <span className="mx-8">{store.announcementText}</span>
-            </p>
+          <div 
+            className="animate-marquee text-xs sm:text-sm font-black uppercase tracking-widest flex items-center"
+            style={{ color: store.announcementTextColor || '#ffffff' }}
+          >
+            {/* 
+              Inyectamos 20 copias exactas del texto. 
+              Esto garantiza que el texto sobresalga de la pantalla.
+              Al moverse un -50%, volverá visualmente al inicio creando el bucle perfecto.
+            */}
+            {Array(20).fill(store.announcementText).map((text, i) => (
+              <span key={i} className="flex items-center whitespace-nowrap">
+                <span className="mx-4 sm:mx-8">{text}</span>
+                <span className="opacity-50">•</span>
+              </span>
+            ))}
           </div>
         </div>
       )}
