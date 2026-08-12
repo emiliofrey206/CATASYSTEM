@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Paintbrush, Save, Loader2, RefreshCcw, ShoppingBag, Megaphone } from 'lucide-react';
+import { Paintbrush, Save, Loader2, RefreshCcw, ShoppingBag, Bell } from 'lucide-react';
 import { Store } from '../types';
 
 interface AdminAppearanceProps {
@@ -58,7 +58,6 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
         badgeOfferTextColor: activeStore.badgeOfferTextColor || defaultColors.badgeOfferTextColor,
         cartItemBgColor: activeStore.cartItemBgColor || defaultColors.cartItemBgColor,
         
-        // Sincronizamos con DB al cargar
         isAnnouncementActive: activeStore.isAnnouncementActive || false,
         announcementText: activeStore.announcementText || '',
         announcementColor: activeStore.announcementColor || defaultColors.announcementColor,
@@ -121,12 +120,11 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <Megaphone className="w-5 h-5 text-blue-500" /> Cintillo de Avisos
+                  <Bell className="w-5 h-5 text-blue-500" /> Cintillo de Avisos
                 </h3>
                 <p className="text-sm text-slate-500 font-medium mt-1">Barra de texto móvil para ofertas o notificaciones.</p>
               </div>
               
-              {/* Botón Switch para Activar/Desactivar guardado en Memoria */}
               <button 
                 type="button"
                 onClick={() => handleChange('isAnnouncementActive', !settings.isAnnouncementActive)}
@@ -142,7 +140,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
                   <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Texto del Anuncio</label>
                   <input 
                     type="text" 
-                    value={settings.announcementText} 
+                    value={settings.announcementText || ''} 
                     onChange={(e) => handleChange('announcementText', e.target.value)}
                     placeholder="Ej. 🔥 ENVÍO GRATIS POR HOY 🔥"
                     className="w-full bg-white border border-slate-200 text-slate-900 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
@@ -189,35 +187,35 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
         {/* VISTA PREVIA */}
         <div className="bg-slate-100 rounded-3xl p-6 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 relative">
           <span className="absolute top-4 left-4 text-xs font-black text-slate-400 uppercase tracking-widest">Vista Previa Móvil</span>
-          <div className="w-[280px] h-[550px] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-black flex flex-col mt-4 relative" style={{ backgroundColor: settings.bgColor, color: settings.textColor }}>
+          <div className="w-[280px] h-[550px] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-black flex flex-col mt-4 relative" style={{ backgroundColor: settings.bgColor || '#ffffff', color: settings.textColor || '#000000' }}>
             
-            <div className="h-14 flex items-center justify-between px-4 shrink-0 shadow-sm" style={{ backgroundColor: settings.headerColor }}>
-              <div className="w-6 h-1 rounded-sm opacity-50" style={{ backgroundColor: settings.textColor }} />
-              <span className="font-black text-sm uppercase">{activeStore.name}</span>
-              <div className="w-4 h-4 rounded-full opacity-50 border-2" style={{ borderColor: settings.textColor }} />
+            <div className="h-14 flex items-center justify-between px-4 shrink-0 shadow-sm" style={{ backgroundColor: settings.headerColor || '#ffffff' }}>
+              <div className="w-6 h-1 rounded-sm opacity-50" style={{ backgroundColor: settings.textColor || '#000000' }} />
+              <span className="font-black text-sm uppercase">{activeStore.name || 'Tienda'}</span>
+              <div className="w-4 h-4 rounded-full opacity-50 border-2" style={{ borderColor: settings.textColor || '#000000' }} />
             </div>
 
             <div className="p-4 flex-1 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl p-2 shadow-sm relative" style={{ backgroundColor: settings.cardColor }}>
+                <div className="rounded-2xl p-2 shadow-sm relative" style={{ backgroundColor: settings.cardColor || '#ffffff' }}>
                   <div className="aspect-square bg-black/5 rounded-xl mb-2 relative">
                     <span className="absolute top-1 right-1 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm" style={{ backgroundColor: settings.badgeOfferColor, color: settings.badgeOfferTextColor }}>OFERTA</span>
                   </div>
-                  <div className="w-2/3 h-2 rounded mb-3 opacity-60" style={{ backgroundColor: settings.textColor }} />
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center float-right shadow-sm" style={{ backgroundColor: settings.accentColor }}><ShoppingBag className="w-3 h-3 text-white" /></div>
+                  <div className="w-2/3 h-2 rounded mb-3 opacity-60" style={{ backgroundColor: settings.textColor || '#000000' }} />
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center float-right shadow-sm" style={{ backgroundColor: settings.accentColor || '#16a34a' }}><ShoppingBag className="w-3 h-3 text-white" /></div>
                 </div>
-                <div className="rounded-2xl p-2 shadow-sm relative" style={{ backgroundColor: settings.cardColor }}>
+                <div className="rounded-2xl p-2 shadow-sm relative" style={{ backgroundColor: settings.cardColor || '#ffffff' }}>
                   <div className="aspect-square bg-black/5 rounded-xl mb-2 relative">
                     <span className="absolute top-1 right-1 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm" style={{ backgroundColor: settings.badgeFewColor, color: settings.badgeFewTextColor }}>POCAS UNID</span>
                   </div>
-                  <div className="w-2/3 h-2 rounded mb-3 opacity-60" style={{ backgroundColor: settings.textColor }} />
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center float-right shadow-sm" style={{ backgroundColor: settings.accentColor }}><ShoppingBag className="w-3 h-3 text-white" /></div>
+                  <div className="w-2/3 h-2 rounded mb-3 opacity-60" style={{ backgroundColor: settings.textColor || '#000000' }} />
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center float-right shadow-sm" style={{ backgroundColor: settings.accentColor || '#16a34a' }}><ShoppingBag className="w-3 h-3 text-white" /></div>
                 </div>
               </div>
             </div>
 
             <div className="p-4 bg-white/10 shrink-0">
-              <div className="w-full py-3 rounded-xl text-xs font-bold text-center shadow-lg" style={{ backgroundColor: settings.checkoutBtnColor, color: settings.checkoutBtnTextColor }}>Enviar Pedido</div>
+              <div className="w-full py-3 rounded-xl text-xs font-bold text-center shadow-lg" style={{ backgroundColor: settings.checkoutBtnColor || '#16a34a', color: settings.checkoutBtnTextColor || '#ffffff' }}>Enviar Pedido</div>
             </div>
           </div>
         </div>
@@ -227,14 +225,18 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
   );
 }
 
-function ColorPicker({ label, value, onChange, slim = false }: { label: string, value: string, onChange: (v: string) => void, slim?: boolean }) {
+// --- FUNCIÓN COLOR PICKER BLINDADA CONTRA ERRORES ---
+function ColorPicker({ label, value, onChange, slim = false }: { label: string, value?: string, onChange: (v: string) => void, slim?: boolean }) {
+  // Aseguramos que siempre haya un color válido en formato string
+  const safeValue = (value && typeof value === 'string') ? value : '#000000';
+  
   return (
     <div className={`flex items-center justify-between bg-white rounded-xl border border-slate-200 ${slim ? 'p-2' : 'p-3'}`}>
       <label className={`font-bold text-slate-800 leading-tight ${slim ? 'text-[10px] w-20' : 'text-sm'}`}>{label}</label>
       <div className="flex items-center gap-1.5 shrink-0">
-        <input type="text" value={value.toUpperCase()} onChange={(e) => onChange(e.target.value)} className="w-16 bg-slate-50 border border-slate-200 rounded-md px-1 py-1 text-[10px] font-mono outline-none text-center" />
+        <input type="text" value={safeValue.toUpperCase()} onChange={(e) => onChange(e.target.value)} className="w-16 bg-slate-50 border border-slate-200 rounded-md px-1 py-1 text-[10px] font-mono outline-none text-center" />
         <div className="relative w-8 h-8 rounded-md overflow-hidden border border-slate-300 shadow-inner cursor-pointer">
-          <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="absolute -inset-2 w-12 h-12 cursor-pointer" />
+          <input type="color" value={safeValue} onChange={(e) => onChange(e.target.value)} className="absolute -inset-2 w-12 h-12 cursor-pointer" />
         </div>
       </div>
     </div>
