@@ -41,6 +41,10 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
   const cartItemBgColor = store.cartItemBgColor || '#ffffff';
 
   const contrastBgColor = getContrastColor(bgColor);
+  
+  // --- MOTOR DE CONTRASTE DINÁMICO PARA EL LOGO VASR LINK ---
+  // Si el contraste pide texto blanco (#ffffff), el fondo es oscuro -> Usamos logo-light.
+  const systemLogo = contrastBgColor === '#ffffff' ? '/logo-light.png' : '/logo-catasystem.png';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Inicio');
@@ -155,7 +159,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         };
       });
 
-      // 2. Disparamos el pedido hacia tu Base de Datos (Esto lo hace aparecer en tu Historial)
+      // 2. Disparamos el pedido hacia tu Base de Datos
       const createdOrder = await addOrder({
         storeId: store.id,
         totalAmount: cartTotal,
@@ -175,7 +179,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       });
       text += `\n*💰 Total a pagar: $${cartTotal.toFixed(2)}*\n\n¿Tienen disponibilidad y cuáles son los métodos de pago?`;
       
-      // 4. Abrimos WhatsApp y limpiamos el sistema para la siguiente compra
+      // 4. Abrimos WhatsApp y limpiamos el sistema
       window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`, '_blank');
       setCart([]);
       setIsCheckoutModalOpen(false);
@@ -325,10 +329,21 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </main>
 
-      <footer className="w-full text-center py-8 mt-auto px-4 opacity-80 hover:opacity-100 transition-opacity duration-300">
-        <p className="text-[10px] sm:text-xs font-black tracking-widest uppercase" style={{ color: contrastBgColor }}>
-          CataSystem Desarrollado por ING. EMILIO FREY, 2026
+      {/* FOOTER PÚBLICO: SELLO DE AUTORÍA VASR LINK DINÁMICO */}
+      <footer className="w-full pb-12 pt-8 mt-auto flex flex-col items-center justify-center border-t border-black/5">
+        <p 
+          className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase mb-3 opacity-60" 
+          style={{ color: textColor }}
+        >
+          Tecnología impulsada por
         </p>
+        <div className="opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300 cursor-pointer">
+          <img 
+            src={systemLogo} 
+            alt="CataSystem - VASR LINK" 
+            className="h-8 sm:h-10 w-auto object-contain drop-shadow-sm" 
+          />
+        </div>
       </footer>
 
       <AnimatePresence>
