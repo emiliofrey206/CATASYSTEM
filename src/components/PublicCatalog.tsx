@@ -39,6 +39,25 @@ interface CartItem {
   quantity: number;
 }
 
+// --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO ---
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes ticker {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+      }
+      .animate-ticker {
+        display: inline-block;
+        white-space: nowrap;
+        animation: ticker 25s linear infinite;
+        padding-left: 100%;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
 export function PublicCatalog({ store, products, categories, colors, addOrder }: PublicCatalogProps) {
   const headerColor = store.headerColor || '#ffffff';
   const bgColor = store.bgColor || '#f8fafc';
@@ -266,6 +285,28 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </header>
 
+{/* --- CINTILLO DE ANUNCIOS (TICKER) --- */}
+      {store.isAnnouncementActive && store.announcementText && (
+        <div 
+          className="w-full overflow-hidden py-2 sm:py-2.5 shadow-sm border-y border-black/5 z-20 sticky top-16 lg:top-0 lg:relative" 
+          style={{ backgroundColor: store.announcementColor || '#1e293b' }}
+        >
+          <div className="w-full relative flex items-center overflow-hidden">
+            <p 
+              className="text-xs sm:text-sm font-black uppercase tracking-widest animate-ticker"
+              style={{ color: getContrastColor(store.announcementColor || '#1e293b') }}
+            >
+              <span className="mx-8">{store.announcementText}</span>
+              <span className="mx-8 opacity-50">•</span>
+              <span className="mx-8">{store.announcementText}</span>
+              <span className="mx-8 opacity-50">•</span>
+              <span className="mx-8">{store.announcementText}</span>
+            </p>
+          </div>
+        </div>
+      )}
+      {/* --- FIN CINTILLO --- */}
+      
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
         <div className="flex flex-col lg:flex-row lg:gap-8 h-full">
           
