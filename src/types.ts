@@ -27,6 +27,7 @@ export interface Store {
  isAnnouncementActive?: boolean;
   announcementText?: string;
   announcementColor?: string;
+ announcementTextColor?: string;
 }
 
 export interface Color {
