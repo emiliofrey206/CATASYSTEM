@@ -18,7 +18,8 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
     badgeOutColor: '#ef4444', badgeOutTextColor: '#ffffff',
     badgeOfferColor: '#2563eb', badgeOfferTextColor: '#ffffff',
     cartItemBgColor: '#ffffff',
-    announcementColor: '#1e293b'
+    announcementColor: '#1e293b',
+    announcementTextColor: '#ffffff'
   };
 
   const [settings, setSettings] = useState({
@@ -43,6 +44,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
     isAnnouncementActive: activeStore?.isAnnouncementActive || false,
     announcementText: activeStore?.announcementText || '',
     announcementColor: activeStore?.announcementColor || defaultColors.announcementColor,
+    announcementTextColor: activeStore?.announcementTextColor || defaultColors.announcementTextColor,
   });
 
   useEffect(() => {
@@ -61,6 +63,7 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
         isAnnouncementActive: activeStore.isAnnouncementActive || false,
         announcementText: activeStore.announcementText || '',
         announcementColor: activeStore.announcementColor || defaultColors.announcementColor,
+        announcementTextColor: activeStore.announcementTextColor || defaultColors.announcementTextColor,
       });
     }
   }, [activeStore]);
@@ -135,22 +138,31 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
             </div>
 
             <div className={`transition-all duration-300 ${settings.isAnnouncementActive ? 'opacity-100 max-h-[500px]' : 'opacity-40 pointer-events-none max-h-[200px]'}`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-1">
                   <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Texto del Anuncio</label>
                   <input 
                     type="text" 
                     value={settings.announcementText || ''} 
                     onChange={(e) => handleChange('announcementText', e.target.value)}
-                    placeholder="Ej. 🔥 ENVÍO GRATIS POR HOY 🔥"
+                    placeholder="Ej. 🔥 ENVÍO GRATIS 🔥"
                     className="w-full bg-white border border-slate-200 text-slate-900 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                   />
                 </div>
-                <ColorPicker 
-                  label="Color del Cintillo" 
-                  value={settings.announcementColor} 
-                  onChange={(val) => handleChange('announcementColor', val)} 
-                />
+                <div className="lg:col-span-1">
+                  <ColorPicker 
+                    label="Color Fondo" 
+                    value={settings.announcementColor} 
+                    onChange={(val) => handleChange('announcementColor', val)} 
+                  />
+                </div>
+                <div className="lg:col-span-1">
+                  <ColorPicker 
+                    label="Color Texto" 
+                    value={settings.announcementTextColor} 
+                    onChange={(val) => handleChange('announcementTextColor', val)} 
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -227,7 +239,6 @@ export function AdminAppearance({ activeStore, updateStore }: AdminAppearancePro
 
 // --- FUNCIÓN COLOR PICKER BLINDADA CONTRA ERRORES ---
 function ColorPicker({ label, value, onChange, slim = false }: { label: string, value?: string, onChange: (v: string) => void, slim?: boolean }) {
-  // Aseguramos que siempre haya un color válido en formato string
   const safeValue = (value && typeof value === 'string') ? value : '#000000';
   
   return (
