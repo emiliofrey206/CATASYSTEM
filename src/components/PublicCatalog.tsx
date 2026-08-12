@@ -335,7 +335,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
           className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase mb-3 opacity-60" 
           style={{ color: textColor }}
         >
-          Tecnología impulsada por
+          Tecnología desarrollada por ING. EMILIO FREY, 2026
         </p>
         <div className="opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300 cursor-pointer">
           <img 
