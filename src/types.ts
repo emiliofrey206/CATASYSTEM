@@ -24,6 +24,9 @@ export interface Store {
   badgeOfferColor?: string;
   badgeOfferTextColor?: string;
   cartItemBgColor?: string;
+ isAnnouncementActive?: boolean;
+  announcementText?: string;
+  announcementColor?: string;
 }
 
 export interface Color {
