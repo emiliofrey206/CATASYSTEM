@@ -4,7 +4,7 @@ import { ProductCard } from './ProductCard';
 import { Product, Category, Store, Color, Order } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
-// --- INTELIGENCIA MATEMÁTICA DE CONTRASTE (CORREGIDA) ---
+// --- INTELIGENCIA MATEMÁTICA DE CONTRASTE ---
 function getContrastColor(hexColor: string) {
   let hex = hexColor?.replace('#', '') || 'ffffff';
   
@@ -69,7 +69,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [categories]);
 
-  // --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO (BUCLE INFINITO SIN CORTES) ---
+  // --- ESTILOS DE ANIMACIÓN PARA EL CINTILLO ---
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -80,7 +80,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       .animate-marquee {
         display: flex;
         width: max-content;
-        /* 50s hace que se mueva lento y constante. Si quieres más lento, sube a 60s */
         animation: marquee-scroll 50s linear infinite; 
       }
     `;
@@ -117,27 +116,63 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     setSelectedCategory(catName); setSearchQuery(''); setIsMobileFiltersOpen(false); setIsSearchMobileOpen(false);
   };
 
+  // --- CALCULADOR DE STOCK REAL ---
+  const getAvailableStock = (product: Product, color: string | null) => {
+    if (color && product.variants && product.variants.length > 0) {
+      const variant = product.variants.find(v => v.color === color);
+      return variant ? (Number(variant.stockQuantity) || 0) : 0;
+    }
+    return Number(product.stockQuantity) || 0;
+  };
+
   const handleAddToCart = (product: Product, color: string | null) => {
+    const availableStock = getAvailableStock(product, color);
+
+    if (availableStock <= 0) {
+      alert("Lo sentimos, este producto está agotado.");
+      return;
+    }
+
     setCart(prevCart => {
       const cartItemId = `${product.id}-${color || 'default'}`;
       const existingItem = prevCart.find(item => item.id === cartItemId);
-      if (existingItem) return prevCart.map(item => item.id === cartItemId ? { ...item, quantity: item.quantity + 1 } : item);
+      
+      // CANDADO MATEMÁTICO: Bloquea si intentan agregar más del stock disponible
+      if (existingItem && existingItem.quantity >= availableStock) {
+        alert(`¡Stock máximo alcanzado! Solo quedan ${availableStock} unidades disponibles.`);
+        return prevCart;
+      }
+
+      if (isFirstAdd) {
+        setIsCartOpen(true);
+        setIsFirstAdd(false);
+        window.history.pushState({ view: 'cart' }, '');
+      } else {
+        setToastMessage({ id: Date.now(), text: `Agregado: ${product.name}` });
+        setTimeout(() => setToastMessage(null), 2500); 
+      }
+
+      if (existingItem) {
+        return prevCart.map(item => item.id === cartItemId ? { ...item, quantity: item.quantity + 1 } : item);
+      }
       return [...prevCart, { id: cartItemId, product, color, quantity: 1 }];
     });
-    
-    if (isFirstAdd) {
-      setIsCartOpen(true);
-      setIsFirstAdd(false);
-      window.history.pushState({ view: 'cart' }, '');
-    } else {
-      setToastMessage({ id: Date.now(), text: `Agregado: ${product.name}` });
-      setTimeout(() => setToastMessage(null), 2500); 
-    }
   };
 
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) { const newQ = item.quantity + delta; return newQ > 0 ? { ...item, quantity: newQ } : item; }
+      if (item.id === id) { 
+        const availableStock = getAvailableStock(item.product, item.color);
+        const newQ = item.quantity + delta; 
+        
+        // CANDADO EN EL CARRITO: Frena el botón "+"
+        if (newQ > availableStock) {
+          alert(`¡Límite alcanzado! Solo hay ${availableStock} unidades disponibles de este artículo.`);
+          return item;
+        }
+        
+        return newQ > 0 ? { ...item, quantity: newQ } : item; 
+      }
       return item;
     }));
   };
@@ -282,11 +317,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
             className="animate-marquee text-xs sm:text-sm font-black uppercase tracking-widest flex items-center"
             style={{ color: store.announcementTextColor || '#ffffff' }}
           >
-            {/* 
-              Inyectamos 20 copias exactas del texto. 
-              Esto garantiza que el texto sobresalga de la pantalla.
-              Al moverse un -50%, volverá visualmente al inicio creando el bucle perfecto.
-            */}
             {Array(20).fill(store.announcementText).map((text, i) => (
               <span key={i} className="flex items-center whitespace-nowrap">
                 <span className="mx-4 sm:mx-8">{text}</span>
@@ -296,7 +326,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
           </div>
         </div>
       )}
-      {/* --- FIN CINTILLO --- */}
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
         <div className="flex flex-col lg:flex-row lg:gap-8 h-full">
@@ -371,20 +400,12 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </main>
 
-      {/* FOOTER PÚBLICO: SELLO DE AUTORÍA VASR LINK DINÁMICO */}
       <footer className="w-full pb-12 pt-8 mt-auto flex flex-col items-center justify-center border-t border-black/5" style={{ backgroundColor: bgColor }}>
-        <p 
-          className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase mb-3 opacity-60" 
-          style={{ color: contrastBgColor }}
-        >
+        <p className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase mb-3 opacity-60" style={{ color: contrastBgColor }}>
           Tecnología desarrollada por ING. EMILIO FREY, 2026
         </p>
         <div className="opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300 cursor-pointer">
-          <img 
-            src={systemLogo} 
-            alt="CataSystem - VASR LINK" 
-            className="h-8 sm:h-10 w-auto object-contain drop-shadow-sm" 
-          />
+          <img src={systemLogo} alt="CataSystem - VASR LINK" className="h-8 sm:h-10 w-auto object-contain drop-shadow-sm" />
         </div>
       </footer>
 
