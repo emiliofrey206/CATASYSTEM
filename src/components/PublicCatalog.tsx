@@ -116,33 +116,38 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     setSelectedCategory(catName); setSearchQuery(''); setIsMobileFiltersOpen(false); setIsSearchMobileOpen(false);
   };
 
-    // --- CALCULADOR DE STOCK REAL (CORREGIDO) ---
+  // --- CALCULADOR DE STOCK REAL (CORREGIDO Y BLINDADO) ---
   const getAvailableStock = (product: Product, color: string | null) => {
-    // 1. Si el producto usa colores (variantes)
-    if (product.variants && product.variants.length > 0) {
-      // Limpiamos espacios y mayúsculas para evitar errores de tipeo en los colores
-      const targetColor = color ? color.trim().toLowerCase() : (product.variants[0].color || '').trim().toLowerCase();
-      const variant = product.variants.find(v => (v.color || '').trim().toLowerCase() === targetColor);
-      
-      if (variant) {
-        const qty = Number(variant.stockQuantity);
-        if (qty > 0) return qty; // Si hay cantidad numérica, aplica el candado estricto
+    try {
+      // 1. Si el producto usa colores (variantes)
+      if (product.variants && product.variants.length > 0) {
+        // Limpiamos espacios y mayúsculas para evitar errores de tipeo en los colores
+        const targetColor = color ? color.trim().toLowerCase() : (product.variants[0].color || '').trim().toLowerCase();
+        const variant = product.variants.find(v => (v.color || '').trim().toLowerCase() === targetColor);
         
-        // SALVAVIDAS: Si el número es 0 o vacío, pero manualmente dice 'Disponible', deja vender (Límite 99)
-        if (variant.stockStatus === 'disponible' || variant.stockStatus === 'pocas_unidades') return 99;
-        return 0; // Si dice explícitamente Agotado, bloquea.
+        if (variant) {
+          const qty = Number(variant.stockQuantity) || 0;
+          // Forzamos a string, minúsculas y sin espacios
+          const vStatus = String(variant.stockStatus || 'disponible').toLowerCase().trim();
+          
+          if (qty > 0) return qty; // Si hay cantidad numérica, aplica el candado estricto
+          if (vStatus === 'agotado') return 0; // Si dice explícitamente Agotado, bloquea.
+          
+          return 99; // SALVAVIDAS: Si el número es 0 o vacío, y NO está agotado, deja vender.
+        }
       }
+      
+      // 2. Si es un producto normal (sin colores)
+      const qty = Number(product.stockQuantity) || 0;
+      const pStatus = String(product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible')).toLowerCase().trim();
+      
+      if (qty > 0) return qty;
+      if (pStatus === 'agotado') return 0;
+      
+      return 99; // SALVAVIDAS GENERAL
+    } catch (e) {
+      return 99; // Ante cualquier error interno, priorizamos no perder la venta
     }
-    
-    // 2. Si es un producto normal (sin colores)
-    const qty = Number(product.stockQuantity);
-    if (qty > 0) return qty;
-    
-    // SALVAVIDAS GENERAL
-    const status = product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible');
-    if (status === 'disponible' || status === 'pocas_unidades') return 99;
-    
-    return 0;
   };
 
   const handleAddToCart = (product: Product, color: string | null) => {
@@ -196,7 +201,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       return item;
     }));
   };
-
 
   const removeCartItem = (id: string) => {
     setCart(prev => {
