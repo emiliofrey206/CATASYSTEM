@@ -1,19 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Search, Moon, Sun, Bell, Settings, TrendingUp, ShoppingBag, CheckCircle, Clock, ChevronDown, Activity } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Search, Moon, Sun, Bell, TrendingUp, ShoppingBag, CheckCircle, Clock, ChevronDown, Activity } from 'lucide-react';
+import { motion } from 'motion/react';
 
-// Interfaces simuladas basadas en tu sistema
-interface AdminDashboardProps {
+interface AdminOrdersProps {
   storeName?: string;
-  accentColor?: string; // El color del sistema configurado por el cliente
+  accentColor?: string;
 }
 
-export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' }: AdminDashboardProps) {
-  // Estado para el Modo Oscuro
+export function AdminOrders({ storeName = 'YOSEANY', accentColor = '#16a34a' }: AdminOrdersProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('TODOS');
 
-  // Aplicar clase 'dark' al HTML cuando cambia el estado
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -22,7 +19,6 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
     }
   }, [isDarkMode]);
 
-  // Datos de prueba para la interfaz
   const kpis = [
     { title: 'Ingresos Totales', value: '$ 1,204.50', trend: '+12.5%', icon: TrendingUp },
     { title: 'Pedidos Pendientes', value: '14', trend: '-2.4%', icon: Clock },
@@ -39,7 +35,7 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
   return (
     <div className={`min-h-screen transition-colors duration-500 bg-slate-50 dark:bg-[#0B0E14] text-slate-900 dark:text-slate-100 font-sans p-4 sm:p-8 flex flex-col`}>
       
-      {/* HEADER SUPERIOR (Estilo Helios Investments) */}
+      {/* HEADER SUPERIOR */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight">Bienvenido, {storeName}</h1>
@@ -47,17 +43,15 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Barra de Búsqueda Flotante */}
-          <div className="hidden md:flex items-center bg-white dark:bg-[#151821] rounded-full px-4 py-2.5 border border-slate-200 dark:border-white/5 shadow-sm transition-all focus-within:ring-2" style={{ focusWithin: { ringColor: accentColor }}}>
+          <div className="hidden md:flex items-center bg-white dark:bg-[#151821] rounded-full px-4 py-2.5 border border-slate-200 dark:border-white/5 shadow-sm">
             <Search className="w-4 h-4 opacity-50 mr-2" />
             <input 
               type="text" 
-              placeholder="Pregúntale al sistema..." 
+              placeholder="Buscar pedido o cliente..." 
               className="bg-transparent border-none outline-none text-sm w-48 dark:placeholder-slate-500"
             />
           </div>
 
-          {/* Controles de Perfil y Tema */}
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -68,8 +62,8 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
             <button className="p-3 rounded-full bg-white dark:bg-[#151821] border border-slate-200 dark:border-white/5 shadow-sm hover:scale-105 transition-transform">
               <Bell className="w-4 h-4" />
             </button>
-            <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-0.5 shadow-lg ml-2 cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-white dark:bg-[#0B0E14] rounded-full flex items-center justify-center border-2 border-transparent">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-0.5 shadow-lg ml-2 cursor-pointer">
+              <div className="w-full h-full bg-white dark:bg-[#0B0E14] rounded-full flex items-center justify-center">
                 <span className="font-black text-xs">YO</span>
               </div>
             </div>
@@ -77,15 +71,13 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
         </div>
       </header>
 
-      {/* ÁREA PRINCIPAL: KPIs y Gráficos (Estilo Bento Box) */}
+      {/* ÁREA PRINCIPAL: KPIs (Bento Box) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         
-        {/* Tarjeta Principal Brillante (Usa el color del sistema) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="lg:col-span-1 rounded-[2rem] p-6 sm:p-8 relative overflow-hidden shadow-lg border border-slate-200 dark:border-white/5 bg-white dark:bg-[#151821] group"
         >
-          {/* Resplandor de fondo usando el accentColor */}
           <div 
             className="absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[80px] opacity-20 dark:opacity-10 group-hover:opacity-30 transition-opacity duration-700"
             style={{ backgroundColor: accentColor }}
@@ -111,7 +103,6 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
           </div>
         </motion.div>
 
-        {/* Tarjetas Secundarias KPIs */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {kpis.slice(1).map((kpi, idx) => (
             <motion.div 
@@ -136,16 +127,15 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
         </div>
       </div>
 
-      {/* SECCIÓN DE PEDIDOS (Estilo Watchlist) */}
+      {/* SECCIÓN DE PEDIDOS */}
       <div className="rounded-[2.5rem] p-6 sm:p-8 border border-slate-200 dark:border-white/5 bg-white dark:bg-[#11131A] shadow-sm flex-1">
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5" style={{ color: accentColor }} /> Últimos Pedidos
+            <ShoppingBag className="w-5 h-5" style={{ color: accentColor }} /> Historial de Pedidos
           </h3>
           
-          {/* Píldoras de Filtro (Estilo Moderno) */}
-          <div className="flex bg-slate-100 dark:bg-[#1A1D24] p-1 rounded-full overflow-x-auto max-w-full no-scrollbar">
+          <div className="flex bg-slate-100 dark:bg-[#1A1D24] p-1 rounded-full overflow-x-auto max-w-full">
             {['TODOS', 'PENDIENTE', 'PAGADO', 'CANCELADO'].map(tab => (
               <button 
                 key={tab}
@@ -158,7 +148,6 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
           </div>
         </div>
 
-        {/* Lista de Pedidos Compacta y Elegante */}
         <div className="space-y-3">
           {orders.map((order, idx) => (
             <motion.div 
@@ -184,7 +173,6 @@ export function AdminDashboard({ storeName = 'YOSEANY', accentColor = '#16a34a' 
                   </p>
                 </div>
                 
-                {/* Botón de Acción Sutil */}
                 <button 
                   className="px-4 py-2 rounded-xl text-xs font-bold transition-all border opacity-0 group-hover:opacity-100"
                   style={{ borderColor: accentColor, color: accentColor }}
