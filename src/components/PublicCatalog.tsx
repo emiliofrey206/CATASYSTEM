@@ -200,7 +200,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         
         // Candado 3: Botones del carrito elegantes
         if (newQ > availableStock) {
-          showToast(`Límite alcanzado: ${availableStock} disp.`, "warning");
+          showToast(`Maximos Disponibles: ${availableStock} disp.`, "warning");
           return item;
         }
         
