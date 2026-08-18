@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { 
-  Search, Plus, CheckCircle, Clock, XCircle, 
-  User, DollarSign, Calendar, Package, ArrowUpRight, Check, X, AlertCircle
+  Search, CheckCircle, Clock, XCircle, 
+  User, DollarSign, Package, Check, X
 } from 'lucide-react';
 import { Order, Product, Store } from '../types';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 
 interface AdminOrdersProps {
   activeStore: Store;
@@ -15,36 +15,47 @@ interface AdminOrdersProps {
   cancelOrder?: (orderId: string) => Promise<void> | void;
 }
 
-export function AdminOrders({ activeStore, orders, products, addOrder, confirmPayment, cancelOrder }: AdminOrdersProps) {
+// NORMALIZADOR BLINDADO DE ESTADOS
+function normalizeStatus(status?: string): 'PENDIENTE' | 'PAGADO' | 'CANCELADO' {
+  const s = (status || '').toLowerCase().trim();
+  if (s === 'completed' || s === 'pagado' || s === 'completado') return 'PAGADO';
+  if (s === 'cancelled' || s === 'cancelado' || s === 'anulado') return 'CANCELADO';
+  return 'PENDIENTE'; // Si no es pagado ni cancelado, SIEMPRE es pendiente
+}
+
+export function AdminOrders({ activeStore, orders, products, confirmPayment, cancelOrder }: AdminOrdersProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'TODOS' | 'PENDIENTE' | 'PAGADO' | 'CANCELADO'>('TODOS');
-  const accentColor = activeStore?.accentColor || '#38bdf8';
+  const accentColor = activeStore?.accentColor || '#16a34a';
 
-  // Métricas Financieras (KPIs)
+  // Métricas Financieras
   const stats = useMemo(() => {
-    const paidOrders = orders.filter(o => o.status === 'completed' || (o.status as string) === 'PAGADO');
-    const pendingOrders = orders.filter(o => o.status === 'pending' || (o.status as string) === 'PENDIENTE');
-    const totalRevenue = paidOrders.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0);
+    let revenue = 0;
+    let pendingCount = 0;
+    let completedCount = 0;
 
-    return {
-      revenue: totalRevenue,
-      pendingCount: pendingOrders.length,
-      completedCount: paidOrders.length,
-    };
+    orders.forEach(o => {
+      const st = normalizeStatus(o.status);
+      if (st === 'PAGADO') {
+        revenue += Number(o.totalAmount) || 0;
+        completedCount += 1;
+      } else if (st === 'PENDIENTE') {
+        pendingCount += 1;
+      }
+    });
+
+    return { revenue, pendingCount, completedCount };
   }, [orders]);
 
-  // Filtrado de Pedidos
+  // Filtrado
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       const matchSearch = 
-        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+        (order.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (order.customerName || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-      const statusUpper = (order.status || '').toUpperCase();
-      let matchStatus = true;
-      if (statusFilter === 'PENDIENTE') matchStatus = statusUpper === 'PENDING' || statusUpper === 'PENDIENTE';
-      if (statusFilter === 'PAGADO') matchStatus = statusUpper === 'COMPLETED' || statusUpper === 'PAGADO';
-      if (statusFilter === 'CANCELADO') matchStatus = statusUpper === 'CANCELLED' || statusUpper === 'CANCELADO';
+      const orderStatus = normalizeStatus(order.status);
+      const matchStatus = statusFilter === 'TODOS' || orderStatus === statusFilter;
 
       return matchSearch && matchStatus;
     });
@@ -61,60 +72,55 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-5">
       
-      {/* ========================================== */}
-      {/* 1. TARJETAS DE MÉTRICAS BENTO (KPIs)       */}
-      {/* ========================================== */}
+      {/* 1. TARJETAS DE MÉTRICAS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
         
-        {/* KPI 1: Ingresos */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-slate-100 dark:bg-[#161B28] border border-slate-200 dark:border-white/5 flex items-center justify-between shadow-sm transition-all">
+        {/* KPI: Ingresos */}
+        <div className="p-5 rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10 flex items-center justify-between shadow-sm">
           <div>
-            <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Ingresos (Pagados)</p>
+            <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ingresos (Pagados)</p>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
               ${stats.revenue.toFixed(2)}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
             <DollarSign className="w-6 h-6" />
           </div>
         </div>
 
-        {/* KPI 2: Pendientes */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-slate-100 dark:bg-[#161B28] border border-slate-200 dark:border-white/5 flex items-center justify-between shadow-sm transition-all">
+        {/* KPI: Pendientes */}
+        <div className="p-5 rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10 flex items-center justify-between shadow-sm">
           <div>
-            <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Pedidos Pendientes</p>
+            <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Pedidos Pendientes</p>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
               {stats.pendingCount}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
             <Clock className="w-6 h-6" />
           </div>
         </div>
 
-        {/* KPI 3: Completados */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-slate-100 dark:bg-[#161B28] border border-slate-200 dark:border-white/5 flex items-center justify-between shadow-sm transition-all sm:col-span-2 lg:col-span-1">
+        {/* KPI: Completados */}
+        <div className="p-5 rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10 flex items-center justify-between shadow-sm sm:col-span-2 lg:col-span-1">
           <div>
-            <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Ventas Completadas</p>
+            <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ventas Completadas</p>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
               {stats.completedCount}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold">
             <CheckCircle className="w-6 h-6" />
           </div>
         </div>
 
       </div>
 
-      {/* ========================================== */}
-      {/* 2. BARRA DE BÚSQUEDA Y FILTROS EN PÍLDORAS */}
-      {/* ========================================== */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-slate-100 dark:bg-[#161B28] p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/5">
+      {/* 2. FILTROS Y BUSCADOR */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#181D2D] p-3 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         
-        {/* Input de Búsqueda */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
@@ -122,12 +128,11 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por Nº de Pedido o Cliente..." 
-            className="w-full bg-white dark:bg-[#111522] border border-slate-200 dark:border-white/5 rounded-xl sm:rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition-all"
+            className="w-full bg-slate-50 dark:bg-[#111522] border border-slate-200 dark:border-white/10 rounded-xl sm:rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none"
           />
         </div>
 
-        {/* Píldoras de Estado */}
-        <div className="flex items-center gap-1 bg-white dark:bg-[#111522] p-1 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-white/5 overflow-x-auto">
+        <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#111522] p-1 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-white/10 overflow-x-auto">
           {(['TODOS', 'PENDIENTE', 'PAGADO', 'CANCELADO'] as const).map(tab => (
             <button
               key={tab}
@@ -135,7 +140,7 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
               className={`px-3.5 py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                 statusFilter === tab 
                   ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               {tab}
@@ -145,62 +150,56 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
 
       </div>
 
-      {/* ========================================== */}
-      {/* 3. GRID FLUIDO DE PEDIDOS (1, 2 O 3 COL)   */}
-      {/* ========================================== */}
+      {/* 3. GRID COMPLETO DE PEDIDOS */}
       {filteredOrders.length === 0 ? (
-        <div className="p-12 text-center rounded-3xl bg-slate-100 dark:bg-[#161B28] border border-slate-200 dark:border-white/5">
+        <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10">
           <Package className="w-12 h-12 mx-auto text-slate-400 mb-3 opacity-40" />
-          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No se encontraron pedidos</h4>
-          <p className="text-xs text-slate-400 mt-1">Los nuevos pedidos registrados aparecerán aquí automáticamente.</p>
+          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No hay pedidos en esta categoría</h4>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-5 w-full">
           {filteredOrders.map((order) => {
-            const isPending = order.status === 'pending' || (order.status as string) === 'PENDIENTE';
-            const isCompleted = order.status === 'completed' || (order.status as string) === 'PAGADO';
-            const isCancelled = order.status === 'cancelled' || (order.status as string) === 'CANCELADO';
+            const status = normalizeStatus(order.status);
+            const isPending = status === 'PENDIENTE';
+            const isCompleted = status === 'PAGADO';
 
             return (
               <motion.div 
                 key={order.id} 
                 layout
-                initial={{ opacity: 0, y: 15 }} 
+                initial={{ opacity: 0, y: 10 }} 
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-3xl p-5 sm:p-6 bg-slate-100 dark:bg-[#161B28] border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                className="rounded-3xl p-5 sm:p-6 bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
-                
-                {/* Cabecera de la Tarjeta */}
                 <div>
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-white/5">
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-white/10">
                     <div>
                       <span className="font-black text-sm text-slate-900 dark:text-white tracking-wider">{order.id}</span>
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-0.5">
                         <User className="w-3.5 h-3.5 text-blue-500" />
-                        <span>{order.customerName}</span>
+                        <span>{order.customerName || 'Cliente sin nombre'}</span>
                       </div>
                     </div>
 
                     <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                       isPending 
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
+                        ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20' 
                         : isCompleted 
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
+                        : 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
                     }`}>
-                      {isPending ? 'Pendiente' : isCompleted ? 'Pagado' : 'Cancelado'}
+                      {status}
                     </span>
                   </div>
 
-                  {/* Lista de Productos del Pedido */}
-                  <div className="space-y-2.5 my-4 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-2 my-4 max-h-48 overflow-y-auto pr-1">
                     {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#111522] border border-slate-200/60 dark:border-white/5">
+                      <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-[#111522] border border-slate-100 dark:border-white/5">
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
                           {item.imageUrl ? (
                             <img src={item.imageUrl} alt={item.productName} className="w-10 h-10 rounded-lg object-cover shrink-0" />
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-white/5 flex items-center justify-center shrink-0">
                               <Package className="w-4 h-4 text-slate-400" />
                             </div>
                           )}
@@ -219,8 +218,7 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
                   </div>
                 </div>
 
-                {/* Pie de la Tarjeta (Total y Botones) */}
-                <div className="pt-4 border-t border-slate-200 dark:border-white/5 flex items-center justify-between mt-2">
+                <div className="pt-4 border-t border-slate-100 dark:border-white/10 flex items-center justify-between mt-2">
                   <div>
                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total</span>
                     <p className="text-xl font-black text-slate-900 dark:text-white">${Number(order.totalAmount).toFixed(2)}</p>
@@ -231,13 +229,13 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
                       <>
                         <button 
                           onClick={() => handleCancel(order.id)}
-                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition-all"
+                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all"
                         >
                           Anular
                         </button>
                         <button 
                           onClick={() => handleConfirm(order.id)}
-                          className="px-4 py-2 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-md transition-all flex items-center gap-1.5"
+                          className="px-4 py-2 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm transition-all flex items-center gap-1.5"
                         >
                           <Check className="w-3.5 h-3.5" /> Pagado
                         </button>
