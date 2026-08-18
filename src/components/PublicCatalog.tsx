@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2, Home, LayoutGrid, User } from 'lucide-react';
+import { Search, ShoppingBag, X, Image as ImageIcon, Menu, ShoppingCart, Plus, Minus, Trash2, MessageCircle, ArrowLeft, CheckCircle2, AlertCircle, Home, LayoutGrid, User } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { Product, Category, Store, Color, Order } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -57,7 +57,9 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
   const [isCartOpen, setIsCartOpen] = useState(false);
   
   const [isFirstAdd, setIsFirstAdd] = useState(true);
-  const [toastMessage, setToastMessage] = useState<{ id: number, text: string } | null>(null);
+  
+  // NUEVO: Toast Message ahora soporta 'success' y 'warning'
+  const [toastMessage, setToastMessage] = useState<{ id: number, text: string, type: 'success' | 'warning' } | null>(null);
 
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [checkoutName, setCheckoutName] = useState('');
@@ -116,14 +118,12 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     setSelectedCategory(catName); setSearchQuery(''); setIsMobileFiltersOpen(false); setIsSearchMobileOpen(false);
   };
 
-  // --- CALCULADOR DE STOCK REAL (CORREGIDO Y SINCRONIZADO) ---
   const getAvailableStock = (prod: Product, color: string | null) => {
     try {
       const gQty = Number(prod.stockQuantity) || 0;
       const gStatus = String(prod.stockStatus || 'disponible').toLowerCase().trim();
       const isGAgotado = gStatus === 'agotado' || prod.inStock === false;
 
-      // 1. Si el producto usa variantes (colores)
       if (prod.variants && prod.variants.length > 0) {
         const targetColor = color ? color.trim().toLowerCase() : (prod.variants[0].color || '').trim().toLowerCase();
         const variant = prod.variants.find(v => (v.color || '').trim().toLowerCase() === targetColor);
@@ -135,43 +135,45 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
           if (vQty > 0) return vQty;
           if (vStatus === 'agotado') return 0;
           
-          // HERENCIA: Si la variante no tiene stock numérico, hereda del producto general
           if (gQty > 0) return gQty;
           if (isGAgotado) return 0;
           
-          return 999; // Salvavidas
+          return 999; 
         }
       }
       
-      // 2. Si es un producto normal (sin colores)
       if (gQty > 0) return gQty;
       if (isGAgotado) return 0;
       
-      return 999; // Salvavidas
+      return 999; 
     } catch (e) {
       return 999;
     }
   };
 
+  const showToast = (text: string, type: 'success' | 'warning' = 'success', duration = 3000) => {
+    setToastMessage({ id: Date.now(), text, type });
+    setTimeout(() => setToastMessage(null), duration);
+  };
+
   const handleAddToCart = (product: Product, color: string | null, qtyToAdd: any = 1) => {
-    // Blindaje por si ProductCard envía un evento en vez de un número
     const validQty = typeof qtyToAdd === 'number' ? qtyToAdd : 1;
     const availableStock = getAvailableStock(product, color);
 
+    // Candado 1: Bloqueo total visualmente elegante
     if (availableStock <= 0) {
-      alert("Lo sentimos, este producto está agotado por el momento.");
+      showToast("Producto agotado por el momento", "warning");
       return;
     }
 
     setCart(prevCart => {
       const cartItemId = `${product.id}-${color || 'default'}`;
       const existingItem = prevCart.find(item => item.id === cartItemId);
-      
       const currentQty = existingItem ? existingItem.quantity : 0;
       
-      // CANDADO MATEMÁTICO AL AGREGAR
+      // Candado 2: Límite matemático elegante
       if (currentQty + validQty > availableStock) {
-        alert(`¡Límite alcanzado! Solo quedan ${availableStock} unidades disponibles en el inventario.`);
+        showToast(`Stock máximo: ${availableStock} unidades`, "warning");
         return prevCart;
       }
 
@@ -180,8 +182,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         setIsFirstAdd(false);
         window.history.pushState({ view: 'cart' }, '');
       } else {
-        setToastMessage({ id: Date.now(), text: `Agregado: ${product.name}` });
-        setTimeout(() => setToastMessage(null), 2500); 
+        showToast(`Agregado: ${product.name}`, "success");
       }
 
       if (existingItem) {
@@ -197,9 +198,9 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         const availableStock = getAvailableStock(item.product, item.color);
         const newQ = item.quantity + delta; 
         
-        // CANDADO DENTRO DEL CARRITO
+        // Candado 3: Botones del carrito elegantes
         if (newQ > availableStock) {
-          alert(`¡Límite alcanzado! Solo quedan ${availableStock} unidades disponibles.`);
+          showToast(`Límite alcanzado: ${availableStock} disp.`, "warning");
           return item;
         }
         
@@ -270,7 +271,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       setIsFirstAdd(true);
 
     } catch (error) {
-      alert("Hubo un error al procesar tu pedido. Por favor intenta de nuevo.");
+      showToast("Error al procesar el pedido. Intenta de nuevo.", "warning");
     } finally {
       setIsProcessing(false);
     }
@@ -339,7 +340,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </header>
 
-      {/* --- CINTILLO DE ANUNCIOS (TICKER SEAMLESS) --- */}
       {store.isAnnouncementActive === true && store.announcementText && store.announcementText.trim() !== '' && (
         <div 
           className="w-full overflow-hidden py-2 sm:py-2.5 shadow-sm border-y border-black/5 z-20 sticky top-16 lg:top-0 lg:relative flex" 
@@ -441,14 +441,25 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         </div>
       </footer>
 
+      {/* --- EL NUEVO SISTEMA DE NOTIFICACIONES (TOASTS ELEGANTES) --- */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
             key={toastMessage.id}
-            initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold w-[90%] max-w-xs justify-center"
+            initial={{ opacity: 0, y: 50, scale: 0.9 }} 
+            animate={{ opacity: 1, y: 0, scale: 1 }} 
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold w-[90%] max-w-sm justify-center backdrop-blur-md border ${
+              toastMessage.type === 'warning' 
+                ? 'bg-amber-500/95 border-amber-400 text-white shadow-amber-500/20' 
+                : 'bg-slate-900/95 border-slate-700 text-white'
+            }`}
           >
-            <CheckCircle2 className="w-5 h-5 text-green-400" />
+            {toastMessage.type === 'warning' ? (
+              <AlertCircle className="w-5 h-5 text-white shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+            )}
             <span className="truncate">{toastMessage.text}</span>
           </motion.div>
         )}
@@ -569,7 +580,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
         )}
       </AnimatePresence>
 
-      {/* --- EL MODAL FINAL DE CHECKOUT --- */}
+      {/* --- MODAL FINAL DE CHECKOUT --- */}
       <AnimatePresence>
         {isCheckoutModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
