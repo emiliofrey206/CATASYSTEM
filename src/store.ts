@@ -7,7 +7,7 @@ class CatalogStore {
   products: Product[] = [];
   categories: Category[] = [];
   colors: Color[] = [];
-  orders: Order[] = []; // <-- Nuestra nueva lista de Pedidos
+  orders: Order[] = []; 
   
   isLoaded = false;
   isAuthenticated = false;
@@ -32,7 +32,6 @@ class CatalogStore {
 
   async loadFromSupabase() {
     try {
-      // 1. Cargamos el núcleo del sistema (si esto falla, se detiene)
       const [storesRes, productsRes, categoriesRes, colorsRes] = await Promise.all([
         supabase.from('stores').select('*').order('created_at', { ascending: true }),
         supabase.from('products').select('*').order('created_at', { ascending: false }),
@@ -47,13 +46,11 @@ class CatalogStore {
       this.categories = categoriesRes.data || [];
       this.colors = colorsRes.data || [];
 
-      // 2. Cargamos los pedidos por separado (Fail-Safe)
-      // Si la tabla es nueva y tiene bloqueos, no tumbará el sistema principal.
       const ordersRes = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (!ordersRes.error) {
         this.orders = ordersRes.data || [];
       } else {
-        console.warn("Nota: No se pudieron cargar los pedidos (falta de permisos SQL).", ordersRes.error.message);
+        console.warn("Nota: No se pudieron cargar los pedidos.", ordersRes.error.message);
       }
 
       if (this.stores.length > 0 && !this.activeStoreId) {
@@ -184,65 +181,67 @@ class CatalogStore {
   }
 
   // ==========================================
-  // LÓGICA DE PEDIDOS E INVENTARIO (NUEVO ERP)
+  // LÓGICA DE PEDIDOS E INVENTARIO (CORREGIDA)
   // ==========================================
 
   addOrder = async (orderData: Omit<Order, 'id' | 'status' | 'created_at'>) => {
     const newOrder: Order = { 
       ...orderData, 
-      id: `PED-${Math.floor(100000 + Math.random() * 900000)}`, // Genera un ID como PED-458192
-      status: 'pendiente' 
+      id: `PED-${Math.floor(100000 + Math.random() * 900000)}`,
+      status: 'PENDIENTE' // Forzamos mayúscula para mantener consistencia
     };
     
-    // 1. Lo mostramos en pantalla inmediatamente
     this.orders = [newOrder, ...this.orders];
     this.notify();
     
-    // 2. Lo enviamos a la Base de Datos
     const { error } = await supabase.from('orders').insert([newOrder]);
     
-    // 3. SI HAY UN ERROR, AHORA SÍ NOS VA A AVISAR
     if (error) {
       console.error("Error creando pedido en Supabase:", error);
-      alert(`⚠️ Error guardando el pedido en la base de datos: ${error.message}\nPor favor, verifica los permisos de Supabase.`);
+      alert(`⚠️ Error guardando el pedido: ${error.message}`);
     }
     
     return newOrder;
   }
 
+  // AHORA RECIBE 3 PARÁMETROS: storeId, orderId y paymentData (para que coincida con el modal)
   confirmOrderPayment = async (
+    storeId: string, 
     orderId: string, 
-    paymentData: { customerName: string, customerPhone: string, paymentMethod: string, referenceNumber: string }
+    paymentData: { clientName: string, phone: string, reference: string }
   ) => {
     const order = this.orders.find(o => o.id === orderId);
     if (!order) return;
 
-    // 1. Actualizar el pedido en pantalla
-    const updatedOrder = { ...order, ...paymentData, status: 'pagado' as const, paid_at: new Date().toISOString() };
+    // 1. Actualizar el pedido en la pantalla localmente
+    const updatedOrder = { 
+      ...order, 
+      customerName: paymentData.clientName || order.customerName, // Mantiene el nombre si lo editaron
+      clientPhone: paymentData.phone,       // Datos del nuevo modal
+      paymentReference: paymentData.reference, // Datos del nuevo modal
+      status: 'PAGADO' as any 
+    };
     this.orders = this.orders.map(o => o.id === orderId ? updatedOrder : o);
 
-    // 2. LA MAGIA: Descontar stock matemático
+    // 2. Descontar stock matemático
     for (const item of order.items) {
       const product = this.products.find(p => p.id === item.productId);
       if (product) {
         let updatedProduct = { ...product };
         let changed = false;
 
-        // Si el producto tiene variantes (colores) y compró uno específico
         if (item.color && updatedProduct.variants && updatedProduct.variants.length > 0) {
           updatedProduct.variants = updatedProduct.variants.map(v => {
             if (v.color === item.color) {
               changed = true;
               const oldStock = v.stockQuantity || 0;
-              const newStock = Math.max(0, oldStock - item.quantity); // Resta matemática
-              // Si el stock numérico llega a 0, cambia la etiqueta a agotado
+              const newStock = Math.max(0, oldStock - item.quantity);
               const newStatus = newStock === 0 && oldStock > 0 ? 'agotado' : v.stockStatus;
               return { ...v, stockQuantity: newStock, stockStatus: newStatus };
             }
             return v;
           });
         } else {
-          // Producto sin variantes (general)
           changed = true;
           const oldStock = updatedProduct.stockQuantity || 0;
           const newStock = Math.max(0, oldStock - item.quantity);
@@ -251,7 +250,6 @@ class CatalogStore {
           updatedProduct.stockStatus = newStatus;
         }
 
-        // Si restamos algo, lo subimos a la base de datos silenciosamente
         if (changed) {
           this.products = this.products.map(p => p.id === product.id ? updatedProduct : p);
           supabase.from('products').update({ 
@@ -264,21 +262,25 @@ class CatalogStore {
     }
     this.notify();
 
-    // 3. Guardar el cobro en Supabase
-    await supabase.from('orders').update({
-      status: 'pagado',
-      customerName: paymentData.customerName,
-      customerPhone: paymentData.customerPhone,
-      paymentMethod: paymentData.paymentMethod,
-      referenceNumber: paymentData.referenceNumber,
-      paid_at: updatedOrder.paid_at
+    // 3. Guardar el cobro en Supabase usando las columnas exactas que creamos
+    const { error } = await supabase.from('orders').update({
+      status: 'PAGADO',
+      customerName: paymentData.clientName || order.customerName,
+      clientPhone: paymentData.phone,
+      paymentReference: paymentData.reference
     }).eq('id', orderId);
+
+    if (error) {
+      console.error("Error al guardar pago en Supabase:", error);
+      alert(`Error de base de datos: ${error.message}`);
+    }
   }
 
-  cancelOrder = async (orderId: string) => {
-    this.orders = this.orders.map(o => o.id === orderId ? { ...o, status: 'cancelado' as const } : o);
+  // AHORA RECIBE 2 PARÁMETROS para coincidir con la llamada desde AdminOrders.tsx
+  cancelOrder = async (storeId: string, orderId: string) => {
+    this.orders = this.orders.map(o => o.id === orderId ? { ...o, status: 'CANCELADO' as any } : o);
     this.notify();
-    await supabase.from('orders').update({ status: 'cancelado' }).eq('id', orderId);
+    await supabase.from('orders').update({ status: 'CANCELADO' }).eq('id', orderId);
   }
 }
 
