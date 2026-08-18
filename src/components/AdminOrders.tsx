@@ -10,14 +10,12 @@ interface AdminOrdersProps {
   activeStore: Store;
   orders: Order[];
   products: Product[];
-  addOrder?: (order: Omit<Order, 'id' | 'status' | 'created_at'>) => Promise<Order>;
-  confirmPayment?: (orderId: string) => Promise<void> | void;
-  confirmOrderPayment?: (orderId: string) => Promise<void> | void;
-  cancelOrder?: (orderId: string) => Promise<void> | void;
-  updateOrderStatus?: (orderId: string, status: any) => Promise<void> | void;
+  addOrder?: any;
+  confirmPayment?: Function;
+  cancelOrder?: Function;
 }
 
-// Normalizador seguro de estados para cualquier variante de texto
+// Normalizador seguro de estados para leer tu base de datos sin errores
 function normalizeStatus(status?: string): 'PENDIENTE' | 'PAGADO' | 'CANCELADO' {
   const s = (status || '').toLowerCase().trim();
   if (s === 'completed' || s === 'pagado' || s === 'completado') return 'PAGADO';
@@ -25,16 +23,11 @@ function normalizeStatus(status?: string): 'PENDIENTE' | 'PAGADO' | 'CANCELADO' 
   return 'PENDIENTE';
 }
 
-export function AdminOrders({ 
-  activeStore, 
-  orders, 
-  confirmPayment, 
-  confirmOrderPayment, 
-  cancelOrder, 
-  updateOrderStatus 
-}: AdminOrdersProps) {
+export function AdminOrders({ activeStore, orders, confirmPayment, cancelOrder }: AdminOrdersProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'TODOS' | 'PENDIENTE' | 'PAGADO' | 'CANCELADO'>('TODOS');
+  
+  // Estado para mostrar el círculo de carga en el botón
   const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
 
   // Cálculo de Métricas en tiempo real
@@ -70,38 +63,34 @@ export function AdminOrders({
     });
   }, [orders, searchQuery, statusFilter]);
 
-  // Ejecución directa de Pago
-  const handleConfirm = async (orderId: string) => {
+  // FUNCIÓN BLINDADA PARA CONFIRMAR PAGO
+  const handleConfirm = async (order: Order) => {
     try {
-      setLoadingOrderId(orderId);
+      setLoadingOrderId(order.id);
       if (confirmPayment) {
-        await confirmPayment(orderId);
-      } else if (confirmOrderPayment) {
-        await confirmOrderPayment(orderId);
-      } else if (updateOrderStatus) {
-        await updateOrderStatus(orderId, 'completed');
+        // Le pasamos expresamente el ID de la tienda y el ID del pedido
+        await confirmPayment(activeStore.id, order.id);
       }
     } catch (error: any) {
-      console.error("Error confirmando pago:", error);
-      alert("No se pudo actualizar el pedido: " + (error?.message || "Error de conexión"));
+      console.error("Error en pago:", error);
+      alert("No se pudo procesar el pago: " + (error?.message || "Error de red"));
     } finally {
       setLoadingOrderId(null);
     }
   };
 
-  // Ejecución directa de Anulación
-  const handleCancel = async (orderId: string) => {
+  // FUNCIÓN BLINDADA PARA ANULAR PEDIDO
+  const handleCancel = async (order: Order) => {
     if (!window.confirm('¿Seguro que deseas anular este pedido?')) return;
     try {
-      setLoadingOrderId(orderId);
+      setLoadingOrderId(order.id);
       if (cancelOrder) {
-        await cancelOrder(orderId);
-      } else if (updateOrderStatus) {
-        await updateOrderStatus(orderId, 'cancelled');
+        // Le pasamos expresamente el ID de la tienda y el ID del pedido
+        await cancelOrder(activeStore.id, order.id);
       }
     } catch (error: any) {
-      console.error("Error anulando pedido:", error);
-      alert("No se pudo anular el pedido: " + (error?.message || "Error de conexión"));
+      console.error("Error al anular:", error);
+      alert("No se pudo anular el pedido: " + (error?.message || "Error de red"));
     } finally {
       setLoadingOrderId(null);
     }
@@ -265,7 +254,7 @@ export function AdminOrders({
                         <button 
                           type="button"
                           disabled={isProcessingThis}
-                          onClick={() => handleCancel(order.id)}
+                          onClick={() => handleCancel(order)}
                           className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-50 transition-all"
                         >
                           Anular
@@ -273,7 +262,7 @@ export function AdminOrders({
                         <button 
                           type="button"
                           disabled={isProcessingThis}
-                          onClick={() => handleConfirm(order.id)}
+                          onClick={() => handleConfirm(order)}
                           className="px-4 py-2 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm disabled:opacity-50 transition-all flex items-center gap-1.5"
                         >
                           {isProcessingThis ? (
