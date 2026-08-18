@@ -30,6 +30,11 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
   const [manualCart, setManualCart] = useState<{product: Product, color: string|null, qty: number, imageUrl?: string}[]>([]);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
+  // --- CÁLCULO DE MÉTRICAS (KPIs) ---
+  const pendingCount = orders.filter(o => o.status === 'pendiente').length;
+  const paidCount = orders.filter(o => o.status === 'pagado').length;
+  const totalRevenue = orders.filter(o => o.status === 'pagado').reduce((acc, o) => acc + o.totalAmount, 0);
+
   const filteredOrders = orders.filter(order => {
     const matchFilter = filter === 'todos' || order.status === filter;
     const matchSearch = search === '' || 
@@ -153,21 +158,45 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 uppercase">Pedidos y Ventas</h2>
           <p className="text-sm text-slate-500 mt-1 hidden sm:block">Historial de clientes e inventario de {activeStore.name}.</p>
         </div>
-        {/* NUEVO BOTÓN PARA PEDIDOS MANUALES */}
         <button onClick={() => setIsManualModalOpen(true)} className="w-full sm:w-auto bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm">
           <Plus className="w-4 h-4" /> Nuevo Pedido Manual
         </button>
       </div>
 
-      {/* BARRA DE FILTROS Y BÚSQUEDA */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full mb-6 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div>
-          <input type="text" placeholder="Buscar por N° de Pedido o Cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white border border-slate-200 text-sm font-medium text-slate-700 rounded-xl pl-9 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500" />
+      {/* MEJORA 1: FILA DE KPIs (MÉTRICAS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Ingresos (Pagados)</p>
+            <h3 className="text-2xl font-black text-slate-900">${totalRevenue.toFixed(2)}</h3>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><DollarSign className="w-6 h-6"/></div>
         </div>
-        <div className="flex bg-slate-200/50 p-1 rounded-xl overflow-x-auto">
-          {['pendiente', 'pagado', 'cancelado', 'todos'].map((f) => (
-            <button key={f} onClick={() => setFilter(f as any)} className={`px-4 py-2 rounded-lg text-sm font-bold uppercase whitespace-nowrap transition-colors ${filter === f ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Pedidos Pendientes</p>
+            <h3 className="text-2xl font-black text-slate-900">{pendingCount}</h3>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><Clock className="w-6 h-6"/></div>
+        </div>
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Ventas Completadas</p>
+            <h3 className="text-2xl font-black text-slate-900">{paidCount}</h3>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><CheckCircle2 className="w-6 h-6"/></div>
+        </div>
+      </div>
+
+      {/* BARRA DE FILTROS Y BÚSQUEDA (MEJORADA CON PÍLDORAS) */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full mb-8">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div>
+          <input type="text" placeholder="Buscar por N° de Pedido o Cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 rounded-full pl-11 pr-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
+        </div>
+        <div className="flex bg-slate-100 p-1.5 rounded-full overflow-x-auto no-scrollbar shadow-inner shrink-0">
+          {['todos', 'pendiente', 'pagado', 'cancelado'].map((f) => (
+            <button key={f} onClick={() => setFilter(f as any)} className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === f ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900 opacity-70 hover:opacity-100'}`}>
               {f}
             </button>
           ))}
@@ -181,38 +210,37 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
           <p className="text-slate-500 font-medium">No hay pedidos en esta categoría.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {filteredOrders.map(order => (
-            <div key={order.id} className="border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden flex flex-col">
+            <div key={order.id} className={`border border-slate-200 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col border-l-4 ${order.status === 'pendiente' ? 'border-l-orange-400' : order.status === 'pagado' ? 'border-l-green-500' : 'border-l-red-500'}`}>
               
-              {/* CABECERA DEL PEDIDO CON EL NOMBRE DEL CLIENTE */}
-              <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-start">
+              {/* CABECERA DEL PEDIDO */}
+              <div className="bg-slate-50/50 p-5 border-b border-slate-100 flex justify-between items-start">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-3 mb-1.5">
                     <h3 className="font-black text-slate-900">{order.id}</h3>
                     {getStatusBadge(order.status)}
                   </div>
-                  {/* AQUÍ ESTÁ LA MEJORA: El nombre siempre visible */}
                   {order.customerName && (
-                    <p className="text-sm font-bold text-blue-700 flex items-center gap-1 mt-1">
-                      <User className="w-3.5 h-3.5"/> {order.customerName}
+                    <p className="text-sm font-bold text-blue-700 flex items-center gap-1.5 mt-1">
+                      <User className="w-4 h-4"/> {order.customerName}
                     </p>
                   )}
-                  <p className="text-xs text-slate-400 mt-1">{new Date(order.created_at || '').toLocaleString()}</p>
+                  <p className="text-[11px] font-semibold text-slate-400 mt-1 uppercase tracking-wider">{new Date(order.created_at || '').toLocaleString()}</p>
                 </div>
               </div>
 
-              <div className="p-4 flex-1 space-y-3">
+              <div className="p-5 flex-1 space-y-3">
                 {order.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-50">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+                  <div key={idx} className="flex items-center gap-4 bg-white p-2.5 rounded-xl border border-slate-100">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0 flex items-center justify-center">
                       {item.imageUrl ? <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 text-slate-300" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-900 truncate">{item.productName}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-black">x{item.quantity}</span>
-                        {item.color && <span className="text-[10px] text-slate-500 uppercase">Color: {item.color}</span>}
+                        {item.color && <span className="text-[10px] text-slate-500 uppercase font-semibold">Color: {item.color}</span>}
                       </div>
                     </div>
                     <span className="font-black text-slate-900 text-sm">${(item.price * item.quantity).toFixed(2)}</span>
@@ -221,24 +249,23 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
               </div>
 
               {order.status === 'pagado' && (
-                <div className="p-4 bg-blue-50/50 border-t border-blue-100 grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-[10px] font-black text-slate-500 uppercase mb-0.5">Teléfono</p><p className="font-bold text-slate-900">{order.customerPhone || 'N/A'}</p></div>
-                  <div><p className="text-[10px] font-black text-slate-500 uppercase mb-0.5">Método</p><p className="font-bold text-slate-900">{order.paymentMethod}</p></div>
-                  <div className="col-span-2"><p className="text-[10px] font-black text-slate-500 uppercase mb-0.5">Referencia</p><p className="font-bold text-slate-900">{order.referenceNumber || 'N/A'}</p></div>
+                <div className="px-5 py-4 bg-blue-50/30 border-t border-blue-50 grid grid-cols-2 gap-4 text-sm">
+                  <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Teléfono</p><p className="font-bold text-slate-800">{order.customerPhone || 'N/A'}</p></div>
+                  <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Método</p><p className="font-bold text-slate-800">{order.paymentMethod}</p></div>
+                  <div className="col-span-2"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Referencia</p><p className="font-bold text-slate-800 tracking-wide">{order.referenceNumber || 'N/A'}</p></div>
                 </div>
               )}
 
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between mt-auto">
+              <div className="p-5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between mt-auto">
                 <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase">Total del Pedido</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total del Pedido</p>
                   <p className="text-2xl font-black text-slate-900">${order.totalAmount.toFixed(2)}</p>
                 </div>
                 
                 {order.status === 'pendiente' && (
                   <div className="flex items-center gap-2">
-                    <button onClick={() => { if(confirm('¿Anular este pedido? No se descontará inventario.')) cancelOrder(order.id); }} className="px-3 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">Anular</button>
-                    {/* BOTÓN RENOMBRADO A "PAGADO" */}
-                    <button onClick={() => openPaymentModal(order)} className="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors shadow-sm flex items-center gap-2"><DollarSign className="w-4 h-4" /> Pagado</button>
+                    <button onClick={() => { if(confirm('¿Anular este pedido? No se descontará inventario.')) cancelOrder(order.id); }} className="px-4 py-2.5 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">Anular</button>
+                    <button onClick={() => openPaymentModal(order)} className="px-5 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors shadow-sm flex items-center gap-2"><DollarSign className="w-4 h-4" /> Pagado</button>
                   </div>
                 )}
               </div>
@@ -365,7 +392,7 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-slate-900 truncate">{item.product.name}</p>
-                          <p className="text-[10px] text-slate-500 uppercase">{item.color ? `Color: ${item.color}` : 'Sin variante'}</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-semibold">{item.color ? `Color: ${item.color}` : 'Sin variante'}</p>
                         </div>
                         <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg p-0.5 border border-slate-200">
                           <button type="button" onClick={() => updateManualQty(idx, -1)} className="w-7 h-7 bg-white rounded shadow-sm flex items-center justify-center font-bold text-slate-600 hover:text-black"><Minus className="w-3 h-3"/></button>
@@ -383,7 +410,7 @@ export function AdminOrders({ activeStore, orders, products, addOrder, confirmPa
             
             <div className="p-6 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
               <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase">Monto Total</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Monto Total</p>
                 <p className="text-2xl font-black text-slate-900">
                   ${manualCart.reduce((acc, item) => acc + ((item.product.isOffer && item.product.offerPrice ? item.product.offerPrice : item.product.price) * item.qty), 0).toFixed(2)}
                 </p>
