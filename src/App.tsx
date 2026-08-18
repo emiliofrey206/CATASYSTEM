@@ -25,18 +25,21 @@ function AdminLayout() {
 
   const catalog = useCatalog();
 
-  // Control directo de la clase dark en el elemento HTML
+  // Control estricto de la clase 'dark' y el color-scheme del navegador
   useEffect(() => {
+    const htmlEl = document.documentElement;
     if (isDarkMode) {
-      document.documentElement.classList.add('dark');
+      htmlEl.classList.add('dark');
+      htmlEl.style.colorScheme = 'dark';
     } else {
-      document.documentElement.classList.remove('dark');
+      htmlEl.classList.remove('dark');
+      htmlEl.style.colorScheme = 'light';
     }
   }, [isDarkMode]);
   
   if (!catalog.isLoaded) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#080A0F] text-slate-900 dark:text-white flex flex-col items-center justify-center gap-3 font-sans">
+      <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#080A0F] text-slate-900 dark:text-white flex flex-col items-center justify-center gap-3 font-sans">
         <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Iniciando CataSystem...</p>
       </div>
@@ -70,7 +73,8 @@ function AdminLayout() {
   };
 
   return (
-    <div className={`min-h-screen h-screen w-full overflow-hidden flex flex-col transition-colors duration-300 font-sans ${isDarkMode ? 'bg-[#080A0F] text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
+    // USAMOS 100dvh PARA EVITAR QUE LOS NAVEGADORES MÓVILES CORTEN LA PANTALLA
+    <div className={`min-h-[100dvh] h-[100dvh] w-full overflow-hidden flex flex-col transition-colors duration-300 font-sans ${isDarkMode ? 'bg-[#080A0F] text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
       
       {/* Resplandor de fondo sutil */}
       <div 
@@ -246,70 +250,74 @@ function AdminLayout() {
             </div>
           </header>
 
-          {/* Vistas Internas */}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
-            <div className="w-full h-full">
-              {currentView === 'admin-orders' && (
-                <AdminOrders 
-                  activeStore={activeStore} 
-                  orders={activeStoreOrders} 
-                  products={activeStoreProducts} 
-                  addOrder={catalog.addOrder} 
-                  confirmPayment={catalog.confirmOrderPayment} 
-                  cancelOrder={catalog.cancelOrder} 
-                />
-              )}
-              {currentView === 'admin-stores' && (
-                <AdminStores 
-                  stores={catalog.stores} 
-                  addStore={catalog.addStore} 
-                  updateStore={catalog.updateStore} 
-                  deleteStore={catalog.deleteStore} 
-                />
-              )}
-              {currentView === 'admin-products' && (
-                <AdminProducts 
-                  activeStore={activeStore} 
-                  products={activeStoreProducts} 
-                  categories={activeStoreCategories} 
-                  colors={activeStoreColors} 
-                  addProduct={catalog.addProduct} 
-                  updateProduct={catalog.updateProduct} 
-                  deleteProduct={catalog.deleteProduct} 
-                />
-              )}
-              {currentView === 'admin-categories' && (
-                <AdminCategories 
-                  activeStore={activeStore} 
-                  categories={activeStoreCategories} 
-                  addCategory={catalog.addCategory} 
-                  updateCategory={catalog.updateCategory} 
-                  deleteCategory={catalog.deleteCategory} 
-                />
-              )}
-              {currentView === 'admin-colors' && (
-                <AdminColors 
-                  activeStore={activeStore} 
-                  colors={activeStoreColors} 
-                  addColor={catalog.addColor} 
-                  updateColor={catalog.updateColor} 
-                  deleteColor={catalog.deleteColor} 
-                />
-              )}
-              {currentView === 'admin-appearance' && (
-                <AdminAppearance 
-                  activeStore={activeStore} 
-                  updateStore={catalog.updateStore} 
-                />
-              )}
+          {/* Vistas Internas con Padding Inferior Corregido (pb-32 en móvil) */}
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-32 md:pb-8 relative">
+            <div className="max-w-6xl mx-auto flex flex-col min-h-full">
+              
+              <div className="flex-1 mb-8">
+                {currentView === 'admin-orders' && (
+                  <AdminOrders 
+                    activeStore={activeStore} 
+                    orders={activeStoreOrders} 
+                    products={activeStoreProducts} 
+                    addOrder={catalog.addOrder} 
+                    confirmPayment={catalog.confirmOrderPayment} 
+                    cancelOrder={catalog.cancelOrder} 
+                  />
+                )}
+                {currentView === 'admin-stores' && (
+                  <AdminStores 
+                    stores={catalog.stores} 
+                    addStore={catalog.addStore} 
+                    updateStore={catalog.updateStore} 
+                    deleteStore={catalog.deleteStore} 
+                  />
+                )}
+                {currentView === 'admin-products' && (
+                  <AdminProducts 
+                    activeStore={activeStore} 
+                    products={activeStoreProducts} 
+                    categories={activeStoreCategories} 
+                    colors={activeStoreColors} 
+                    addProduct={catalog.addProduct} 
+                    updateProduct={catalog.updateProduct} 
+                    deleteProduct={catalog.deleteProduct} 
+                  />
+                )}
+                {currentView === 'admin-categories' && (
+                  <AdminCategories 
+                    activeStore={activeStore} 
+                    categories={activeStoreCategories} 
+                    addCategory={catalog.addCategory} 
+                    updateCategory={catalog.updateCategory} 
+                    deleteCategory={catalog.deleteCategory} 
+                  />
+                )}
+                {currentView === 'admin-colors' && (
+                  <AdminColors 
+                    activeStore={activeStore} 
+                    colors={activeStoreColors} 
+                    addColor={catalog.addColor} 
+                    updateColor={catalog.updateColor} 
+                    deleteColor={catalog.deleteColor} 
+                  />
+                )}
+                {currentView === 'admin-appearance' && (
+                  <AdminAppearance 
+                    activeStore={activeStore} 
+                    updateStore={catalog.updateStore} 
+                  />
+                )}
+              </div>
+
+              {/* Footer Corporativo AHORA VISIBLE EN MÓVIL TAMBIÉN */}
+              <footer className="flex w-full items-center justify-between px-4 sm:px-6 py-4 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#11141D]/40 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 shrink-0 mt-auto rounded-2xl">
+                <span>CataSystem SaaS 2026</span>
+                <span className="text-right">Tecnología desarrollada por<br className="sm:hidden"/> Ing. Emilio Frey</span>
+              </footer>
+
             </div>
           </main>
-
-          {/* Footer Corporativo */}
-          <footer className="hidden md:flex w-full items-center justify-between px-6 py-3 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#11141D]/40 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 shrink-0">
-            <span>CataSystem SaaS 2026</span>
-            <span>Tecnología desarrollada por Ing. Emilio Frey</span>
-          </footer>
 
         </div>
       </div>
