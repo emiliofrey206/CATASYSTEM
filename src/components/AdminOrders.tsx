@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { 
-  Search, CheckCircle, Clock, XCircle, 
-  User, DollarSign, Package, Check, X
+  Search, CheckCircle, Clock, 
+  User, DollarSign, Package, Check, Loader2
 } from 'lucide-react';
 import { Order, Product, Store } from '../types';
 import { motion } from 'motion/react';
@@ -10,25 +10,34 @@ interface AdminOrdersProps {
   activeStore: Store;
   orders: Order[];
   products: Product[];
-  addOrder: (order: Omit<Order, 'id' | 'status' | 'created_at'>) => Promise<Order>;
+  addOrder?: (order: Omit<Order, 'id' | 'status' | 'created_at'>) => Promise<Order>;
   confirmPayment?: (orderId: string) => Promise<void> | void;
+  confirmOrderPayment?: (orderId: string) => Promise<void> | void;
   cancelOrder?: (orderId: string) => Promise<void> | void;
+  updateOrderStatus?: (orderId: string, status: any) => Promise<void> | void;
 }
 
-// NORMALIZADOR BLINDADO DE ESTADOS
+// Normalizador seguro de estados para cualquier variante de texto
 function normalizeStatus(status?: string): 'PENDIENTE' | 'PAGADO' | 'CANCELADO' {
   const s = (status || '').toLowerCase().trim();
   if (s === 'completed' || s === 'pagado' || s === 'completado') return 'PAGADO';
   if (s === 'cancelled' || s === 'cancelado' || s === 'anulado') return 'CANCELADO';
-  return 'PENDIENTE'; // Si no es pagado ni cancelado, SIEMPRE es pendiente
+  return 'PENDIENTE';
 }
 
-export function AdminOrders({ activeStore, orders, products, confirmPayment, cancelOrder }: AdminOrdersProps) {
+export function AdminOrders({ 
+  activeStore, 
+  orders, 
+  confirmPayment, 
+  confirmOrderPayment, 
+  cancelOrder, 
+  updateOrderStatus 
+}: AdminOrdersProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'TODOS' | 'PENDIENTE' | 'PAGADO' | 'CANCELADO'>('TODOS');
-  const accentColor = activeStore?.accentColor || '#16a34a';
+  const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
 
-  // Métricas Financieras
+  // Cálculo de Métricas en tiempo real
   const stats = useMemo(() => {
     let revenue = 0;
     let pendingCount = 0;
@@ -47,7 +56,7 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
     return { revenue, pendingCount, completedCount };
   }, [orders]);
 
-  // Filtrado
+  // Filtro de lista
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       const matchSearch = 
@@ -61,13 +70,40 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
     });
   }, [orders, searchQuery, statusFilter]);
 
-  const handleConfirm = (orderId: string) => {
-    if (confirmPayment) confirmPayment(orderId);
+  // Ejecución directa de Pago
+  const handleConfirm = async (orderId: string) => {
+    try {
+      setLoadingOrderId(orderId);
+      if (confirmPayment) {
+        await confirmPayment(orderId);
+      } else if (confirmOrderPayment) {
+        await confirmOrderPayment(orderId);
+      } else if (updateOrderStatus) {
+        await updateOrderStatus(orderId, 'completed');
+      }
+    } catch (error: any) {
+      console.error("Error confirmando pago:", error);
+      alert("No se pudo actualizar el pedido: " + (error?.message || "Error de conexión"));
+    } finally {
+      setLoadingOrderId(null);
+    }
   };
 
-  const handleCancel = (orderId: string) => {
-    if (window.confirm('¿Seguro que deseas anular este pedido?')) {
-      if (cancelOrder) cancelOrder(orderId);
+  // Ejecución directa de Anulación
+  const handleCancel = async (orderId: string) => {
+    if (!window.confirm('¿Seguro que deseas anular este pedido?')) return;
+    try {
+      setLoadingOrderId(orderId);
+      if (cancelOrder) {
+        await cancelOrder(orderId);
+      } else if (updateOrderStatus) {
+        await updateOrderStatus(orderId, 'cancelled');
+      }
+    } catch (error: any) {
+      console.error("Error anulando pedido:", error);
+      alert("No se pudo anular el pedido: " + (error?.message || "Error de conexión"));
+    } finally {
+      setLoadingOrderId(null);
     }
   };
 
@@ -77,7 +113,6 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
       {/* 1. TARJETAS DE MÉTRICAS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
         
-        {/* KPI: Ingresos */}
         <div className="p-5 rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10 flex items-center justify-between shadow-sm">
           <div>
             <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ingresos (Pagados)</p>
@@ -90,7 +125,6 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
           </div>
         </div>
 
-        {/* KPI: Pendientes */}
         <div className="p-5 rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10 flex items-center justify-between shadow-sm">
           <div>
             <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Pedidos Pendientes</p>
@@ -103,7 +137,6 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
           </div>
         </div>
 
-        {/* KPI: Completados */}
         <div className="p-5 rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10 flex items-center justify-between shadow-sm sm:col-span-2 lg:col-span-1">
           <div>
             <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ventas Completadas</p>
@@ -118,7 +151,7 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
 
       </div>
 
-      {/* 2. FILTROS Y BUSCADOR */}
+      {/* 2. BARRA DE BÚSQUEDA Y SELECTOR DE ESTADOS */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#181D2D] p-3 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         
         <div className="relative flex-1">
@@ -135,6 +168,7 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
         <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#111522] p-1 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-white/10 overflow-x-auto">
           {(['TODOS', 'PENDIENTE', 'PAGADO', 'CANCELADO'] as const).map(tab => (
             <button
+              type="button"
               key={tab}
               onClick={() => setStatusFilter(tab)}
               className={`px-3.5 py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
@@ -150,11 +184,11 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
 
       </div>
 
-      {/* 3. GRID COMPLETO DE PEDIDOS */}
+      {/* 3. GRID DE PEDIDOS */}
       {filteredOrders.length === 0 ? (
         <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#181D2D] border border-slate-200 dark:border-white/10">
           <Package className="w-12 h-12 mx-auto text-slate-400 mb-3 opacity-40" />
-          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No hay pedidos en esta categoría</h4>
+          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No hay pedidos en esta sección</h4>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-5 w-full">
@@ -162,6 +196,7 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
             const status = normalizeStatus(order.status);
             const isPending = status === 'PENDIENTE';
             const isCompleted = status === 'PAGADO';
+            const isProcessingThis = loadingOrderId === order.id;
 
             return (
               <motion.div 
@@ -177,7 +212,7 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
                       <span className="font-black text-sm text-slate-900 dark:text-white tracking-wider">{order.id}</span>
                       <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-0.5">
                         <User className="w-3.5 h-3.5 text-blue-500" />
-                        <span>{order.customerName || 'Cliente sin nombre'}</span>
+                        <span>{order.customerName || 'Cliente'}</span>
                       </div>
                     </div>
 
@@ -228,16 +263,25 @@ export function AdminOrders({ activeStore, orders, products, confirmPayment, can
                     {isPending && (
                       <>
                         <button 
+                          type="button"
+                          disabled={isProcessingThis}
                           onClick={() => handleCancel(order.id)}
-                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all"
+                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-50 transition-all"
                         >
                           Anular
                         </button>
                         <button 
+                          type="button"
+                          disabled={isProcessingThis}
                           onClick={() => handleConfirm(order.id)}
-                          className="px-4 py-2 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm transition-all flex items-center gap-1.5"
+                          className="px-4 py-2 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm disabled:opacity-50 transition-all flex items-center gap-1.5"
                         >
-                          <Check className="w-3.5 h-3.5" /> Pagado
+                          {isProcessingThis ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>Pagado</span>
                         </button>
                       </>
                     )}
