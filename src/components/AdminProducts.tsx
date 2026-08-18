@@ -292,4 +292,210 @@ export function AdminProducts({ activeStore, products, categories, colors = [], 
                   {getStockBadge(actualStock)}
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => updateProduct(product.id, { isHidden: !isHidden })} className={`p-
+                  <button onClick={() => updateProduct(product.id, { isHidden: !isHidden })} className={`p-2.5 rounded-xl transition-colors ${isHidden ? 'bg-slate-200 dark:bg-white/10 text-slate-500' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-600'}`}>{isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+                  <button onClick={() => handleOpenModal(product)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-600 transition-colors"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => { if(confirm('¿Eliminar?')) deleteProduct(product.id); }} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SOLUCIÓN: MODAL CON MARGEN INFERIOR Y SCROLL INTERNO PERFECTO           */}
+      {/* ========================================================================= */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm md:p-4 pb-[80px] md:pb-0">
+          
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-[#151821] rounded-t-[2.5rem] md:rounded-[2.5rem] w-full max-w-2xl shadow-2xl flex flex-col max-h-[calc(100dvh-80px)] md:max-h-[85vh] border border-slate-200 dark:border-white/10 overflow-hidden">
+            
+            {/* 1. CABECERA FIJA */}
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-100 dark:border-white/5 shrink-0 bg-white dark:bg-[#151821]">
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                {editingId ? 'Editar Producto' : 'Nuevo Producto'}
+              </h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} disabled={isUploading} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 2. CUERPO DESLIZABLE (SCROLL INDEPENDIENTE) */}
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar bg-white dark:bg-[#151821]">
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-50 dark:bg-[#11131A] border border-slate-200 dark:border-white/5 rounded-2xl">
+                <div className={`p-3 rounded-xl shrink-0 ${formData.isHidden ? 'bg-slate-200 dark:bg-white/10 text-slate-500' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400'}`}>
+                  {formData.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-black text-slate-900 dark:text-white">Estado de Visibilidad</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-1">
+                    {formData.isHidden ? 'Oculto (Los clientes no lo ven)' : 'Visible en el catálogo público'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-2 sm:mt-0">
+                  <input type="checkbox" className="sr-only peer" checked={!formData.isHidden} onChange={(e) => setFormData({...formData, isHidden: !e.target.checked})} disabled={isUploading} />
+                  <div className="w-14 h-7 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-white/5 pb-2">Datos Principales</h4>
+                
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">Nombre del Producto</label>
+                  <input required type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all" placeholder="Ej. Franela Oversize" />
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">Precio Base ($)</label>
+                    <input required type="number" step="0.01" min="0" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all" placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">Categoría</label>
+                    <select required value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer">
+                      <option value="" disabled>Selecciona...</option>
+                      {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-red-50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/10 rounded-2xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-black text-red-600 dark:text-red-400 flex items-center gap-1"><Tag className="w-4 h-4" /> ¿En Oferta?</p>
+                      <p className="text-[10px] font-bold text-red-500/70 uppercase tracking-widest mt-0.5">Aplica un descuento visible</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" checked={formData.isOffer} onChange={(e) => setFormData({...formData, isOffer: e.target.checked})} disabled={isUploading} />
+                      <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                    </label>
+                  </div>
+                  {formData.isOffer && (
+                    <div>
+                      <label className="block text-[10px] font-black text-red-700 dark:text-red-400 uppercase tracking-widest mb-2">Precio de Oferta ($)</label>
+                      <input type="number" step="0.01" min="0" required={formData.isOffer} value={formData.offerPrice} onChange={(e) => setFormData({...formData, offerPrice: e.target.value})} disabled={isUploading} className="w-full bg-white dark:bg-[#0B0E14] border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/50" placeholder="0.00" />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">Descripción Corta</label>
+                  <textarea rows={3} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all resize-none" placeholder="Detalles del producto..."></textarea>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-white/5 pb-2">Imagen Principal y Stock</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">Foto del Producto</label>
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                        {formData.imageUrl ? <img src={formData.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 text-slate-400" />}
+                      </div>
+                      <label className="flex-1 bg-slate-50 dark:bg-[#11131A] border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300 px-4 py-3 rounded-xl text-xs font-bold text-center cursor-pointer transition-colors">
+                        <span>{formData.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}</span>
+                        <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={isUploading} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">Disponibilidad</label>
+                      <select value={formData.stockStatus} onChange={(e) => setFormData({...formData, stockStatus: e.target.value as StockStatus})} disabled={isUploading} className="w-full bg-slate-50 dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-3 py-3 text-[11px] font-bold text-slate-900 dark:text-white outline-none cursor-pointer">
+                        <option value="disponible">🟢 Disponible</option>
+                        <option value="pocas_unidades">🟠 Pocas Unid.</option>
+                        <option value="agotado">🔴 Agotado</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">Cantidad (Stock)</label>
+                      <input type="number" min="0" value={formData.stockQuantity} onChange={(e) => setFormData({...formData, stockQuantity: e.target.value})} disabled={isUploading} className="w-full bg-slate-50 dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-3 py-3 text-[11px] font-bold text-slate-900 dark:text-white outline-none text-center" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
+                  <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Variantes (Colores)</h4>
+                  <button type="button" onClick={addVariant} disabled={isUploading || colors.length === 0} className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue-100 disabled:opacity-50">
+                    <Plus className="w-3 h-3" /> Agregar Color
+                  </button>
+                </div>
+
+                {colors.length === 0 && (
+                  <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl text-center">
+                    <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400">Debes crear colores en el Muestrario antes de agregar variantes.</p>
+                  </div>
+                )}
+
+                <div className="space-y-3 pb-4">
+                  {formData.variants.map((variant) => (
+                    <div key={variant.id} className="p-4 bg-slate-50 dark:bg-[#11131A] border border-slate-200 dark:border-white/5 rounded-2xl relative group">
+                      <button type="button" onClick={() => removeVariant(variant.id)} disabled={isUploading} className="absolute -top-2 -right-2 w-7 h-7 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform">
+                        <X className="w-4 h-4" />
+                      </button>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Color</label>
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg shadow-inner shrink-0 border border-slate-200 dark:border-white/10" style={{ backgroundColor: colors.find(c => c.id === variant.colorId)?.hex || '#ccc' }}></div>
+                            <select value={variant.colorId} onChange={(e) => updateVariantField(variant.id, 'colorId', e.target.value)} disabled={isUploading} className="flex-1 bg-white dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer">
+                              {colors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Foto (Opcional)</label>
+                          <div className="flex items-center gap-2">
+                            <label className="flex-1 bg-white dark:bg-[#0B0E14] border border-slate-200 dark:border-white/10 hover:bg-slate-50 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors">
+                              <span>{variant.imageUrl ? 'Cambiar' : 'Subir Foto'}</span>
+                              <input type="file" accept="image/*" onChange={(e) => handleVariantImageUpload(variant.id, e)} disabled={isUploading} className="hidden" />
+                            </label>
+                            {variant.imageUrl && <img src={variant.imageUrl} className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-white/5" />}
+                          </div>
+                        </div>
+
+                        <div className="sm:col-span-2 grid grid-cols-2 gap-3">
+                           <div>
+                              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Disponibilidad</label>
+                              <select value={variant.stockStatus} onChange={(e) => updateVariantField(variant.id, 'stockStatus', e.target.value)} disabled={isUploading} className="w-full bg-white dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-900 dark:text-white outline-none cursor-pointer">
+                                <option value="disponible">🟢 Disponible</option>
+                                <option value="pocas_unidades">🟠 Pocas Unid.</option>
+                                <option value="agotado">🔴 Agotado</option>
+                              </select>
+                           </div>
+                           <div>
+                              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Cantidad (Stock)</label>
+                              <input type="number" min="0" value={variant.stockQuantity} onChange={(e) => updateVariantField(variant.id, 'stockQuantity', e.target.value)} disabled={isUploading} className="w-full bg-white dark:bg-[#0B0E14] border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-900 dark:text-white outline-none text-center" />
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. PIE DE PÁGINA FIJO */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-[#11131A] shrink-0 flex items-center justify-end gap-3">
+              <button type="button" onClick={() => setIsModalOpen(false)} disabled={isUploading} className="px-5 py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 transition-colors">
+                Cancelar
+              </button>
+              <button type="submit" disabled={isUploading} className="px-6 py-3 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-500 shadow-md flex items-center gap-2 disabled:opacity-50 transition-all">
+                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {isUploading ? 'Guardando...' : 'Guardar Producto'}
+              </button>
+            </div>
+
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
