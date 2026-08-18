@@ -116,41 +116,46 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     setSelectedCategory(catName); setSearchQuery(''); setIsMobileFiltersOpen(false); setIsSearchMobileOpen(false);
   };
 
-  // --- CALCULADOR DE STOCK REAL (CORREGIDO Y BLINDADO) ---
+  // --- CALCULADOR DE STOCK REAL (CORREGIDO DEFINITIVO) ---
   const getAvailableStock = (product: Product, color: string | null) => {
     try {
+      const generalQty = Number(product.stockQuantity) || 0;
+      const generalStatus = String(product.stockStatus || 'disponible').toLowerCase().trim();
+
       // 1. Si el producto usa colores (variantes)
       if (product.variants && product.variants.length > 0) {
-        // Limpiamos espacios y mayúsculas para evitar errores de tipeo en los colores
         const targetColor = color ? color.trim().toLowerCase() : (product.variants[0].color || '').trim().toLowerCase();
         const variant = product.variants.find(v => (v.color || '').trim().toLowerCase() === targetColor);
         
         if (variant) {
-          const qty = Number(variant.stockQuantity) || 0;
-          // Forzamos a string, minúsculas y sin espacios
+          const vQty = Number(variant.stockQuantity) || 0;
           const vStatus = String(variant.stockStatus || 'disponible').toLowerCase().trim();
           
-          if (qty > 0) return qty; // Si hay cantidad numérica, aplica el candado estricto
-          if (vStatus === 'agotado') return 0; // Si dice explícitamente Agotado, bloquea.
+          if (vQty > 0) return vQty;
+          if (vStatus === 'agotado') return 0;
           
-          return 99; // SALVAVIDAS: Si el número es 0 o vacío, y NO está agotado, deja vender.
+          // ¡EL TRUCO ESTÁ AQUÍ!: Si el color no tiene stock definido, pero el producto general SÍ tiene (ej. 1), lo respeta.
+          if (generalQty > 0) return generalQty;
+          if (generalStatus === 'agotado') return 0;
+
+          return 99; // Salvavidas extremo para productos muy antiguos sin datos
         }
       }
       
       // 2. Si es un producto normal (sin colores)
-      const qty = Number(product.stockQuantity) || 0;
-      const pStatus = String(product.stockStatus || (product.inStock === false ? 'agotado' : 'disponible')).toLowerCase().trim();
+      if (generalQty > 0) return generalQty;
+      if (generalStatus === 'agotado') return 0;
+      if (product.inStock === false) return 0;
       
-      if (qty > 0) return qty;
-      if (pStatus === 'agotado') return 0;
-      
-      return 99; // SALVAVIDAS GENERAL
+      return 99; // Salvavidas extremo
     } catch (e) {
-      return 99; // Ante cualquier error interno, priorizamos no perder la venta
+      return 99;
     }
   };
 
-  const handleAddToCart = (product: Product, color: string | null) => {
+  const handleAddToCart = (product: Product, color: string | null, qtyToAdd: any = 1) => {
+    // Blindaje por si ProductCard envía un evento en vez de un número
+    const validQty = typeof qtyToAdd === 'number' ? qtyToAdd : 1;
     const availableStock = getAvailableStock(product, color);
 
     if (availableStock <= 0) {
@@ -162,9 +167,11 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       const cartItemId = `${product.id}-${color || 'default'}`;
       const existingItem = prevCart.find(item => item.id === cartItemId);
       
+      const currentQty = existingItem ? existingItem.quantity : 0;
+      
       // CANDADO MATEMÁTICO AL AGREGAR
-      if (existingItem && existingItem.quantity >= availableStock) {
-        alert(`¡Límite alcanzado! Solo quedan ${availableStock} unidades disponibles en inventario.`);
+      if (currentQty + validQty > availableStock) {
+        alert(`¡Límite alcanzado! Solo quedan ${availableStock} unidades disponibles en el inventario.`);
         return prevCart;
       }
 
@@ -178,12 +185,11 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       }
 
       if (existingItem) {
-        return prevCart.map(item => item.id === cartItemId ? { ...item, quantity: item.quantity + 1 } : item);
+        return prevCart.map(item => item.id === cartItemId ? { ...item, quantity: item.quantity + validQty } : item);
       }
-      return [...prevCart, { id: cartItemId, product, color, quantity: 1 }];
+      return [...prevCart, { id: cartItemId, product, color, quantity: validQty }];
     });
   };
-
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) { 
