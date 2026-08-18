@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { 
   Settings, ExternalLink, LayoutDashboard, LayoutList, LogOut, 
   Store as StoreIcon, Palette, Paintbrush, Receipt, Menu, X, 
-  Moon, Sun, Sparkles, Search, ArrowUpRight
+  Moon, Sun, ArrowUpRight
 } from 'lucide-react';
 import { useCatalog } from './store';
 import { PublicCatalog } from './components/PublicCatalog';
@@ -19,7 +19,9 @@ import { motion, AnimatePresence } from 'motion/react';
 function AdminLayout() {
   const [currentView, setCurrentView] = useState<'admin-products' | 'admin-categories' | 'admin-stores' | 'admin-colors' | 'admin-appearance' | 'admin-orders'>('admin-orders');
   const [isMobileAdminMenuOpen, setIsMobileAdminMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  
+  // INICIA SIEMPRE EN MODO BLANCO / DÍA POR DEFECTO
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const catalog = useCatalog();
 
@@ -33,9 +35,9 @@ function AdminLayout() {
   
   if (!catalog.isLoaded) {
     return (
-      <div className="min-h-screen bg-[#080A0F] text-white flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Iniciando CataSystem...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0B0E14] text-slate-900 dark:text-white flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Cargando Sistema...</p>
       </div>
     );
   }
@@ -44,7 +46,7 @@ function AdminLayout() {
 
   const activeStore = catalog.stores.find(s => s.id === catalog.activeStoreId) || catalog.stores[0];
   const publicUrl = `/catalogo/${activeStore?.slug || 'tienda'}`;
-  const accentColor = activeStore?.accentColor || '#38bdf8';
+  const accentColor = activeStore?.accentColor || '#16a34a';
   
   const activeStoreProducts = catalog.products.filter(p => p.storeId === activeStore?.id);
   const activeStoreCategories = catalog.categories.filter(c => c.storeId === activeStore?.id);
@@ -61,38 +63,30 @@ function AdminLayout() {
   ];
 
   return (
-    <div className={`h-screen w-screen overflow-hidden flex flex-col transition-colors duration-500 font-sans ${isDarkMode ? 'bg-[#080A10] text-slate-100' : 'bg-[#F1F4F9] text-slate-900'}`}>
+    <div className={`h-screen w-screen overflow-hidden flex flex-col transition-colors duration-300 font-sans ${isDarkMode ? 'bg-[#0B0E14] text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
       
-      {/* Resplandor Ambiental */}
-      <div 
-        className="fixed -top-24 left-1/4 w-[600px] h-[600px] rounded-full blur-[160px] pointer-events-none opacity-20 dark:opacity-10 transition-all duration-700 z-0"
-        style={{ backgroundColor: accentColor }}
-      />
-
-      {/* Contenedor Fluido 100% */}
-      <div className="flex-1 flex overflow-hidden p-2 sm:p-3 lg:p-4 gap-3 sm:gap-4 relative z-10 w-full">
+      {/* Contenedor Principal a Pantalla Completa */}
+      <div className="flex-1 flex overflow-hidden p-2 sm:p-3 lg:p-4 gap-3 sm:gap-4 w-full">
         
-        {/* ========================================== */}
-        {/* SIDEBAR FLOTANTE ESCRITORIO                */}
-        {/* ========================================== */}
-        <aside className="hidden md:flex flex-col justify-between w-64 lg:w-72 shrink-0 rounded-3xl bg-white dark:bg-[#111522] border border-slate-200 dark:border-white/10 p-5 shadow-xl transition-all">
+        {/* SIDEBAR LATERAL ESCRITORIO */}
+        <aside className="hidden md:flex flex-col justify-between w-64 lg:w-72 shrink-0 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200 dark:border-white/10 p-5 shadow-sm transition-colors">
           
           <div>
-            {/* Logo y Marca */}
+            {/* Logo */}
             <div className="flex items-center gap-3 px-2 py-2 mb-6">
               <img 
                 src={isDarkMode ? "/logo-light.png" : "/logo-catasystem.png"} 
                 alt="CataSystem" 
-                className="h-9 w-auto object-contain drop-shadow-sm transition-all"
+                className="h-10 w-auto object-contain drop-shadow-sm transition-all"
                 onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
               />
               <div className="min-w-0">
                 <h1 className="font-black text-sm tracking-wider uppercase truncate text-slate-900 dark:text-white">CataSystem</h1>
-                <p className="text-[9px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">VASR LINK TECH</p>
+                <p className="text-[9px] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase">VASR LINK TECH</p>
               </div>
             </div>
 
-            {/* Menú de Navegación */}
+            {/* Menú */}
             <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">Administración</p>
             <nav className="space-y-1.5">
               {navItems.map((item) => {
@@ -104,12 +98,12 @@ function AdminLayout() {
                     onClick={() => setCurrentView(item.id as any)}
                     className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 group ${
                       isActive 
-                        ? 'text-white shadow-lg' 
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                        ? 'text-white shadow-md' 
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                     }`}
                     style={isActive ? { 
-                      background: `linear-gradient(135deg, ${accentColor} 0%, #0f172a 130%)`,
-                      boxShadow: `0 8px 20px -4px ${accentColor}40`
+                      backgroundColor: accentColor,
+                      boxShadow: `0 8px 20px -4px ${accentColor}50`
                     } : {}}
                   >
                     <div className="flex items-center gap-3">
@@ -123,19 +117,19 @@ function AdminLayout() {
             </nav>
           </div>
 
-          {/* Footer Sidebar: Tienda y Sesión */}
+          {/* Footer Sidebar */}
           <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-white/10">
-            <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-100 dark:bg-[#181D2D] border border-slate-200 dark:border-white/5">
+            <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-[#181D2D] border border-slate-200 dark:border-white/5">
               <div className="flex items-center gap-2.5 min-w-0 pr-1">
                 {activeStore?.logoUrl ? (
-                  <img src={activeStore.logoUrl} alt={activeStore.name} className="w-8 h-8 rounded-xl object-cover shrink-0 border border-black/5" />
+                  <img src={activeStore.logoUrl} alt={activeStore.name} className="w-8 h-8 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-white/10" />
                 ) : (
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 font-black text-xs" style={{ backgroundColor: accentColor }}>
                     <StoreIcon className="w-4 h-4" />
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Tienda</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Tienda</p>
                   <p className="text-xs font-bold truncate text-slate-900 dark:text-white">{activeStore?.name}</p>
                 </div>
               </div>
@@ -153,7 +147,7 @@ function AdminLayout() {
 
             <button 
               onClick={() => catalog.logout()}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>Cerrar Sesión</span>
@@ -161,10 +155,8 @@ function AdminLayout() {
           </div>
         </aside>
 
-        {/* ========================================== */}
-        {/* ÁREA PRINCIPAL FLUIDA (PANTALLA COMPLETA)   */}
-        {/* ========================================== */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-[#111522] border border-slate-200 dark:border-white/10 shadow-2xl transition-colors duration-500">
+        {/* ÁREA PRINCIPAL (100% PANTALLA COMPLETA) */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-[#121622] border border-slate-200 dark:border-white/10 shadow-sm transition-colors duration-300">
           
           {/* Header Superior */}
           <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-white/10 shrink-0">
@@ -180,13 +172,13 @@ function AdminLayout() {
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">
                   {navItems.find(n => n.id === currentView)?.label}
                 </h2>
-                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest hidden sm:block">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:block">
                   {activeStore?.name} • Panel de Control
                 </p>
               </div>
             </div>
 
-            {/* Controles */}
+            {/* Controles Header */}
             <div className="flex items-center gap-2 sm:gap-3">
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)}
@@ -200,7 +192,7 @@ function AdminLayout() {
                 href={publicUrl} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider text-white shadow-md hover:opacity-90 active:scale-95 transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider text-white shadow-sm hover:opacity-90 active:scale-95 transition-all"
                 style={{ backgroundColor: accentColor }}
               >
                 <span className="hidden sm:inline">Ver Catálogo</span>
@@ -217,7 +209,7 @@ function AdminLayout() {
             </div>
           </header>
 
-          {/* Vistas Internas (100% Ancho sin max-w) */}
+          {/* Vistas Internas */}
           <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 pb-24 md:pb-6 w-full">
             <div className="w-full">
               {currentView === 'admin-orders' && (
@@ -277,7 +269,7 @@ function AdminLayout() {
           </main>
 
           {/* Footer Corporativo */}
-          <footer className="hidden md:flex w-full items-center justify-between px-6 py-2.5 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0E121D]/50 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 shrink-0">
+          <footer className="hidden md:flex w-full items-center justify-between px-6 py-2.5 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0E121D] text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 shrink-0">
             <span>CataSystem SaaS 2026</span>
             <span>Tecnología desarrollada por Ing. Emilio Frey</span>
           </footer>
@@ -285,21 +277,19 @@ function AdminLayout() {
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* MENÚ MÓVIL (DRAWER)                        */}
-      {/* ========================================== */}
+      {/* MENÚ MÓVIL (OFF-CANVAS) */}
       <AnimatePresence>
         {isMobileAdminMenuOpen && (
           <>
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100] md:hidden" 
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] md:hidden" 
               onClick={() => setIsMobileAdminMenuOpen(false)} 
             />
             <motion.div 
               initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} 
               transition={{ type: 'spring', damping: 25, stiffness: 200 }} 
-              className="fixed inset-y-0 left-0 w-[80%] max-w-sm z-[100] bg-white dark:bg-[#0E121D] border-r border-slate-200 dark:border-white/10 flex flex-col justify-between shadow-2xl md:hidden p-6"
+              className="fixed inset-y-0 left-0 w-[80%] max-w-sm z-[100] bg-white dark:bg-[#121622] border-r border-slate-200 dark:border-white/10 flex flex-col justify-between shadow-2xl md:hidden p-6"
             >
               <div>
                 <div className="flex justify-between items-center pb-5 border-b border-slate-200 dark:border-white/10">
@@ -309,7 +299,7 @@ function AdminLayout() {
                   </div>
                   <button 
                     onClick={() => setIsMobileAdminMenuOpen(false)} 
-                    className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full bg-slate-100 dark:bg-white/5"
+                    className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full bg-slate-100 dark:bg-white/5"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -325,7 +315,7 @@ function AdminLayout() {
                         key={item.id}
                         onClick={() => { setCurrentView(item.id as any); setIsMobileAdminMenuOpen(false); }}
                         className={`w-full text-left p-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 transition-colors ${
-                          isActive ? 'text-white shadow-md' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                          isActive ? 'text-white shadow-md' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
                         }`}
                         style={isActive ? { backgroundColor: accentColor } : {}}
                       >
@@ -351,7 +341,7 @@ function AdminLayout() {
       </AnimatePresence>
 
       {/* BARRA MÓVIL INFERIOR */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#0E121D]/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 z-40 px-3 py-2 flex justify-between gap-1 pb-safe shadow-lg">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#121622]/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 z-40 px-3 py-2 flex justify-between gap-1 pb-safe shadow-lg">
         <button 
           onClick={() => setCurrentView('admin-orders')} 
           className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl flex-1 transition-colors ${currentView === 'admin-orders' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`}
@@ -395,9 +385,9 @@ function PublicCatalogView() {
   const catalog = useCatalog();
   if (!catalog.isLoaded) {
     return (
-      <div className="min-h-screen bg-[#080A0F] text-white flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Cargando Tienda...</p>
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Cargando Tienda...</p>
       </div>
     );
   }
