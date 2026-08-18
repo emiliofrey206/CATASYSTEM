@@ -34,11 +34,41 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
-  const isProductGeneralAgotado = product.stockStatus === 'agotado' || product.inStock === false;
-  const activeVariantData = product.variants?.find(v => v.color === activeColor);
-  const isActiveVariantAgotado = activeVariantData ? ((activeVariantData as any).stockStatus === 'agotado') : false;
-  const isCurrentlyAgotado = isProductGeneralAgotado || isActiveVariantAgotado;
-  const displayStockBadge = isCurrentlyAgotado ? 'agotado' : (product.stockStatus || 'disponible');
+  // --- SINCRONIZACIÓN MATEMÁTICA CON EL CARRITO ---
+  const getVariantStock = (colorName: string | null) => {
+    const gQty = Number(product.stockQuantity) || 0;
+    const gStatus = String(product.stockStatus || 'disponible').toLowerCase().trim();
+    const isGAgotado = gStatus === 'agotado' || product.inStock === false;
+
+    if (product.variants && product.variants.length > 0) {
+      const target = colorName ? colorName.trim().toLowerCase() : (product.variants[0].color || '').trim().toLowerCase();
+      const variant = product.variants.find(v => (v.color || '').trim().toLowerCase() === target);
+      
+      if (variant) {
+        const vQty = Number(variant.stockQuantity) || 0;
+        const vStatus = String((variant as any).stockStatus || 'disponible').toLowerCase().trim();
+        
+        if (vQty > 0) return vQty;
+        if (vStatus === 'agotado') return 0;
+        if (gQty > 0) return gQty;
+        if (isGAgotado) return 0;
+        return 999;
+      }
+    }
+    if (gQty > 0) return gQty;
+    if (isGAgotado) return 0;
+    return 999;
+  };
+
+  const availableStock = getVariantStock(activeColor);
+  const isCurrentlyAgotado = availableStock <= 0;
+  
+  let displayStockBadge = product.stockStatus || 'disponible';
+  if (isCurrentlyAgotado) {
+    displayStockBadge = 'agotado';
+  } else if (availableStock > 0 && availableStock <= 3) {
+    displayStockBadge = 'pocas_unidades';
+  }
 
   const allImages = useMemo(() => {
     const images: string[] = [];
@@ -120,7 +150,6 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
         <div onClick={handleOpenQuickView} className="relative aspect-square bg-black/5 overflow-hidden shrink-0 cursor-pointer">
           {activeImage ? (
             <>
-              {/* MAGIA APLICADA AQUÍ: loading="lazy" y decoding="async" */}
               <img 
                 src={activeImage} 
                 alt={product.name} 
@@ -155,7 +184,9 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                 {product.variants.map((variant, idx) => {
                   const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
                   const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
-                  const isVariantAgotado = (variant as any).stockStatus === 'agotado' || isProductGeneralAgotado;
+                  
+                  // EVALUACIÓN ESTRICTA DEL COLOR
+                  const isVariantAgotado = getVariantStock(variant.color) <= 0;
 
                   return (
                     <button 
@@ -197,7 +228,7 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
               onClick={(e) => handleSmartAddToCart(e, false)} 
               className="w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center transition-all disabled:opacity-50 active:scale-95 shadow-md" 
               style={{ backgroundColor: accentColor, color: '#fff' }}
-              title={isCurrentlyAgotado ? 'Color Agotado' : 'Añadir al Pedido'}
+              title={isCurrentlyAgotado ? 'Agotado' : 'Añadir al Pedido'}
             >
               <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -275,12 +306,12 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
 
                 {product.variants && product.variants.length > 0 && (
                   <div className="mb-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider mb-3 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'} {isActiveVariantAgotado && '(Agotado)'}</span></h4>
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider mb-3 opacity-60">Color seleccionado: <span className="font-normal opacity-100 ml-1">{activeColor || 'Por defecto'} {isCurrentlyAgotado && '(Agotado)'}</span></h4>
                     <div className="flex flex-wrap gap-4">
                         {product.variants.map((variant, idx) => {
                           const masterColor = colors.find(c => c.name.trim().toLowerCase() === variant.color.trim().toLowerCase());
                           const hexColor = masterColor ? (masterColor.colorCode || (masterColor as any).value || (masterColor as any).hex) : (variant.colorCode || '#e2e8f0');
-                          const isVariantAgotado = (variant as any).stockStatus === 'agotado' || isProductGeneralAgotado;
+                          const isVariantAgotado = getVariantStock(variant.color) <= 0;
 
                           return (
                             <button 
@@ -311,7 +342,7 @@ export function ProductCard({ product, store, colors, onAddToCart }: ProductCard
                     className="w-full py-3 rounded-xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 shadow-lg"
                     style={{ backgroundColor: accentColor }}
                   >
-                    <ShoppingCart className="w-4 h-4" /> {isCurrentlyAgotado ? 'Color/Producto Agotado' : 'Añadir a mi pedido'}
+                    <ShoppingCart className="w-4 h-4" /> {isCurrentlyAgotado ? 'Agotado' : 'Añadir a mi pedido'}
                   </button>
                 </div>
               </div>
