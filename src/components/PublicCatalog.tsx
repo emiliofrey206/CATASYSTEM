@@ -152,17 +152,6 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       return 999;
     }
   };
-      
-      // 2. Si es un producto normal (sin colores)
-      if (generalQty > 0) return generalQty;
-      if (generalStatus === 'agotado') return 0;
-      if (product.inStock === false) return 0;
-      
-      return 99; // Salvavidas extremo
-    } catch (e) {
-      return 99;
-    }
-  };
 
   const handleAddToCart = (product: Product, color: string | null, qtyToAdd: any = 1) => {
     // Blindaje por si ProductCard envía un evento en vez de un número
@@ -201,6 +190,7 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
       return [...prevCart, { id: cartItemId, product, color, quantity: validQty }];
     });
   };
+
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) { 
