@@ -4,7 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class', // <--- ¡ESTA ES LA MAGIA QUE ARREGLA EL PROBLEMA!
+  darkMode: 'class', // <--- ESTO DESVINCULA EL SISTEMA DEL TELÉFONO
   theme: {
     extend: {},
   },
