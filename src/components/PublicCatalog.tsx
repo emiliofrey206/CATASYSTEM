@@ -116,31 +116,42 @@ export function PublicCatalog({ store, products, categories, colors, addOrder }:
     setSelectedCategory(catName); setSearchQuery(''); setIsMobileFiltersOpen(false); setIsSearchMobileOpen(false);
   };
 
-  // --- CALCULADOR DE STOCK REAL (CORREGIDO DEFINITIVO) ---
-  const getAvailableStock = (product: Product, color: string | null) => {
+  // --- CALCULADOR DE STOCK REAL (CORREGIDO Y SINCRONIZADO) ---
+  const getAvailableStock = (prod: Product, color: string | null) => {
     try {
-      const generalQty = Number(product.stockQuantity) || 0;
-      const generalStatus = String(product.stockStatus || 'disponible').toLowerCase().trim();
+      const gQty = Number(prod.stockQuantity) || 0;
+      const gStatus = String(prod.stockStatus || 'disponible').toLowerCase().trim();
+      const isGAgotado = gStatus === 'agotado' || prod.inStock === false;
 
-      // 1. Si el producto usa colores (variantes)
-      if (product.variants && product.variants.length > 0) {
-        const targetColor = color ? color.trim().toLowerCase() : (product.variants[0].color || '').trim().toLowerCase();
-        const variant = product.variants.find(v => (v.color || '').trim().toLowerCase() === targetColor);
+      // 1. Si el producto usa variantes (colores)
+      if (prod.variants && prod.variants.length > 0) {
+        const targetColor = color ? color.trim().toLowerCase() : (prod.variants[0].color || '').trim().toLowerCase();
+        const variant = prod.variants.find(v => (v.color || '').trim().toLowerCase() === targetColor);
         
         if (variant) {
           const vQty = Number(variant.stockQuantity) || 0;
-          const vStatus = String(variant.stockStatus || 'disponible').toLowerCase().trim();
+          const vStatus = String((variant as any).stockStatus || 'disponible').toLowerCase().trim();
           
           if (vQty > 0) return vQty;
           if (vStatus === 'agotado') return 0;
           
-          // ¡EL TRUCO ESTÁ AQUÍ!: Si el color no tiene stock definido, pero el producto general SÍ tiene (ej. 1), lo respeta.
-          if (generalQty > 0) return generalQty;
-          if (generalStatus === 'agotado') return 0;
-
-          return 99; // Salvavidas extremo para productos muy antiguos sin datos
+          // HERENCIA: Si la variante no tiene stock numérico, hereda del producto general
+          if (gQty > 0) return gQty;
+          if (isGAgotado) return 0;
+          
+          return 999; // Salvavidas
         }
       }
+      
+      // 2. Si es un producto normal (sin colores)
+      if (gQty > 0) return gQty;
+      if (isGAgotado) return 0;
+      
+      return 999; // Salvavidas
+    } catch (e) {
+      return 999;
+    }
+  };
       
       // 2. Si es un producto normal (sin colores)
       if (generalQty > 0) return generalQty;
